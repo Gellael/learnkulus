@@ -70,8 +70,13 @@ export default function Practice({ initialTopic = 'power' }: { initialTopic?: st
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        <span className="badge" title="Tersimpan di browser ini">XP {xp}</span>
-        <span className="badge" title="Jawaban benar berturut-turut">Streak {streak}</span>
+        <div className="hud" title="Tersimpan di browser ini">
+          <span className="lvl">Level {Math.floor(xp / 50) + 1}</span>
+          <span className="bar"><span style={{ width: `${(xp % 50) * 2}%` }} /></span>
+          <span className="xp">{xp} XP</span>
+          <span className="streak">Streak {streak}</span>
+        </div>
+        
       </div>
       {problem && (
         <div className="card">
@@ -92,7 +97,7 @@ export default function Practice({ initialTopic = 'power' }: { initialTopic?: st
       {err && <p className="error">{err}</p>}
       {result && (
         <>
-          <p className={result.correct ? 'ok' : 'error'}>
+          <p className={result.correct ? 'ok pop' : 'error'}>
             {result.correct ? 'Benar! +10 XP' : 'Belum tepat. Ini pembahasannya:'}
           </p>
           <Steps sol={result.solution} />

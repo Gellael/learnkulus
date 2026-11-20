@@ -76,7 +76,7 @@ pub fn call(f: F, a: Expr) -> Expr {
     Expr::Call(f, Box::new(a))
 }
 
-fn fmt_num(n: f64) -> String {
+pub fn fmt_num(n: f64) -> String {
     if n.fract() == 0.0 && n.abs() < 1e15 {
         format!("{}", n as i64)
     } else {

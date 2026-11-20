@@ -6,6 +6,7 @@ pub mod eval;
 pub mod expr;
 pub mod generator;
 pub mod parser;
+pub mod poly;
 pub mod simplify;
 
 pub use diff::Step;
@@ -19,8 +20,33 @@ pub struct Solution {
     pub steps: Vec<Step>,
 }
 
-/// Turunan ke-`order` (1..=5) dari `input`, lengkap dengan langkah.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Method {
+    /// Pilih aturan turunan sesuai bentuk soal.
+    Auto,
+    /// Definisi turunan dengan limit (polinomial).
+    Limit,
+    /// Jabarkan dulu, lalu aturan pangkat (polinomial).
+    Expand,
+}
+
+impl Method {
+    pub fn parse(s: &str) -> Method {
+        match s {
+            "limit" => Method::Limit,
+            "expand" => Method::Expand,
+            _ => Method::Auto,
+        }
+    }
+}
+
+/// Turunan ke-`order` (1..=5) dengan metode otomatis.
 pub fn solve(input: &str, order: usize) -> Result<Solution, String> {
+    solve_with(input, order, Method::Auto)
+}
+
+/// Turunan ke-`order` (1..=5) dengan metode pilihan, lengkap dengan langkah.
+pub fn solve_with(input: &str, order: usize, method: Method) -> Result<Solution, String> {
     if order == 0 || order > 5 {
         return Err("Orde turunan harus 1 sampai 5".into());
     }
@@ -32,21 +58,26 @@ pub fn solve(input: &str, order: usize) -> Result<Solution, String> {
         if order > 1 {
             steps.push(Step::marker(format!("Turunan ke-{}", k), cur.latex()));
         }
-        let d = diff::diff(&cur, &mut steps)?;
-        let simplified = simplify::simplify(&d);
-        if d.latex() != simplified.latex() {
-            let mut s = Step::marker("Sederhanakan".to_string(), String::new());
-            s.details = vec![format!("{} = {}", d.latex(), simplified.latex())];
-            steps.push(s);
+        match method {
+            Method::Auto => {
+                let d = diff::diff(&cur, &mut steps)?;
+                let simplified = simplify::simplify(&d);
+                if d.latex() != simplified.latex() {
+                    let mut s = Step::marker("Sederhanakan".to_string(), String::new());
+                    s.why = "Rapikan hasil: hitung perkalian, gabungkan suku sejenis, dan buang bentuk seperti 1·x atau x¹.".to_string();
+                    s.details = vec![format!("{} = {}", d.latex(), simplified.latex())];
+                    steps.push(s);
+                }
+                cur = simplified;
+            }
+            Method::Limit | Method::Expand => {
+                let (d, s) = if method == Method::Limit { poly::by_definition(&cur)? } else { poly::by_expansion(&cur)? };
+                steps.extend(s);
+                cur = simplify::simplify(&d);
+            }
         }
-        cur = simplified;
     }
-    Ok(Solution {
-        input_latex,
-        derivative_latex: cur.latex(),
-        derivative: cur,
-        steps,
-    })
+    Ok(Solution { input_latex, derivative_latex: cur.latex(), derivative: cur, steps })
 }
 
 /// Apakah `answer` setara dengan turunan ke-`order` dari `problem`?
@@ -152,6 +183,30 @@ mod tests {
         for t in &s.steps {
             println!("{}{} | {:?} | {}", "  ".repeat(t.depth), t.rule, t.details, t.result);
         }
+    }
+
+    #[test]
+    fn metode_pilihan() {
+        let eq = |p: &str, m: Method, key: &str| {
+            let s = solve_with(p, 1, m).unwrap();
+            assert!(eval::equivalent(&s.derivative, &parser::parse(key).unwrap()), "{} -> {}", p, s.derivative_latex);
+            assert!(s.steps.iter().all(|t| !t.why.is_empty() || t.rule.starts_with("Turunan ke")));
+        };
+        eq("x^2", Method::Limit, "2x");
+        eq("3x^2 - 5x", Method::Limit, "6x - 5");
+        eq("(x+1)^3", Method::Limit, "3(x+1)^2");
+        eq("(x^2+1)(x-3)", Method::Expand, "3x^2 - 6x + 1");
+        eq("(x^2+3)^5", Method::Expand, "10x(x^2+3)^4");
+        assert!(solve_with("sin x", 1, Method::Limit).is_err());
+        assert!(solve_with("1/x", 1, Method::Expand).is_err());
+        assert_eq!(solve_with("x^4", 2, Method::Limit).unwrap().derivative_latex, "12x^{2}");
+    }
+
+    #[test]
+    fn rujukan_langkah() {
+        let s = solve("7x^2 cos 10x", 1).unwrap();
+        assert!(s.steps[0].details.iter().any(|d| d.contains("hasil langkah 2")));
+        assert!(s.steps[0].why.contains("hasil kali"));
     }
 
     #[test]

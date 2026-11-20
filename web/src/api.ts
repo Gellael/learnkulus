@@ -3,6 +3,7 @@ const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
 export type Step = {
   rule: string
   formula: string
+  why: string
   appliedTo: string
   details: string[]
   result: string
@@ -11,6 +12,7 @@ export type Step = {
 export type Solution = { input: string; derivative: string; steps: Step[] }
 export type Problem = { topic: string; seed: number; expr: string; latex: string }
 export type CheckResult = { correct: boolean; solution: Solution }
+export type MethodId = 'auto' | 'limit' | 'expand'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(API + path, init)
@@ -25,8 +27,8 @@ const post = (body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 })
 
-export const solve = (expr: string, order: number) =>
-  req<Solution>('/solve', post({ expr, order }))
+export const solve = (expr: string, order: number, method: MethodId = 'auto') =>
+  req<Solution>('/solve', post({ expr, order, method }))
 
 export const getProblem = (topic: string, seed: number) =>
   req<Problem>(`/problem?topic=${topic}&seed=${seed}`)

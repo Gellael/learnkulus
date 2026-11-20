@@ -1,4 +1,4 @@
-use engine::{check_derivative, generator::generate, parser::parse, solve};
+use engine::{check_derivative, generator::generate, parser::parse, solve_with, Method as SolveMethod};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use worker::*;
@@ -8,6 +8,8 @@ struct SolveReq {
     expr: String,
     #[serde(default = "one")]
     order: usize,
+    #[serde(default)]
+    method: String,
 }
 
 fn one() -> usize {
@@ -33,8 +35,8 @@ fn bad(msg: &str) -> Result<Response> {
     Ok(Response::from_json(&json!({ "error": msg }))?.with_status(400))
 }
 
-fn solution_json(expr: &str, order: usize) -> std::result::Result<Value, String> {
-    let s = solve(expr, order)?;
+fn solution_json(expr: &str, order: usize, method: &str) -> std::result::Result<Value, String> {
+    let s = solve_with(expr, order, SolveMethod::parse(method))?;
     let steps: Vec<Value> = s
         .steps
         .iter()
@@ -42,6 +44,7 @@ fn solution_json(expr: &str, order: usize) -> std::result::Result<Value, String>
             json!({
                 "rule": t.rule,
                 "formula": t.formula,
+                "why": t.why,
                 "appliedTo": t.applied_to,
                 "details": t.details,
                 "result": t.result,
@@ -85,7 +88,7 @@ async fn fetch(mut req: Request, _env: Env, _ctx: Context) -> Result<Response> {
 
         // Penyelesai bebas: ekspresi apa pun + orde turunan.
         (Method::Post, "/solve") => match req.json::<SolveReq>().await {
-            Ok(b) => match solution_json(&b.expr, b.order) {
+            Ok(b) => match solution_json(&b.expr, b.order, &b.method) {
                 Ok(v) => Response::from_json(&v),
                 Err(m) => bad(&m),
             },
@@ -99,7 +102,7 @@ async fn fetch(mut req: Request, _env: Env, _ctx: Context) -> Result<Response> {
                 Ok(expr) => match check_derivative(&expr, &b.answer, 1) {
                     Err(m) => bad(&format!("Jawaban tidak bisa dibaca: {}", m)),
                     Ok(correct) => {
-                        let sol = solution_json(&expr, 1).unwrap_or(Value::Null);
+                        let sol = solution_json(&expr, 1, "auto").unwrap_or(Value::Null);
                         Response::from_json(&json!({ "correct": correct, "solution": sol }))
                     }
                 },
