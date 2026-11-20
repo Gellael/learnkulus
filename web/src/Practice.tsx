@@ -98,7 +98,7 @@ export default function Practice({ initialTopic = 'power' }: { initialTopic?: st
       {result && (
         <>
           <p className={result.correct ? 'ok pop' : 'error'}>
-            {result.correct ? 'Benar! +10 XP' : 'Belum tepat. Ini pembahasannya:'}
+            {result.correct ? 'Benar! +10 XP. Pola ini sudah kamu kuasai.' : 'Belum tepat, tidak apa-apa. Salah itu bagian dari belajar. Yuk lihat di mana beloknya:'}
           </p>
           <Steps sol={result.solution} />
         </>

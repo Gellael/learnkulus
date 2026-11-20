@@ -15,6 +15,22 @@ pub fn simplify(e: &Expr) -> Expr {
     cur
 }
 
+/// Seperti `simplify`, tetapi mengembalikan tiap bentuk antara (satu per putaran),
+/// elemen pertama adalah ekspresi awal dan elemen terakhir adalah hasil akhir.
+pub fn simplify_stages(e: &Expr) -> Vec<Expr> {
+    let mut out = vec![e.clone()];
+    let mut cur = e.clone();
+    for _ in 0..30 {
+        let next = pass(&cur);
+        if next == cur {
+            break;
+        }
+        out.push(next.clone());
+        cur = next;
+    }
+    out
+}
+
 fn pass(e: &Expr) -> Expr {
     match e {
         Num(_) | X => e.clone(),

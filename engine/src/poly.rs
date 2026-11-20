@@ -153,21 +153,21 @@ pub fn by_definition(e: &Expr) -> Result<(Expr, Vec<Step>), String> {
         st(
             "Tulis definisi turunan",
             r"f'(x)=\lim_{h\to 0}\frac{f(x+h)-f(x)}{h}",
-            "Turunan adalah kemiringan garis singgung, yaitu limit kemiringan garis sekan saat jarak h mendekati 0. Kita hitung limit itu langkah demi langkah.",
+            "Turunan adalah kemiringan garis singgung. Kita 'menangkapnya' dengan garis sekan lewat dua titik yang berjarak h, lalu merapatkan titik kedua sampai h mendekati 0 (coba slider di Beranda!).\nDi cara ini tidak ada jalan pintas: kita hitung limitnya langkah demi langkah.",
             vec![format!("f(x) = {}", el)],
             String::new(),
         ),
         st(
             "Hitung f(x + h)",
             "",
-            "Ganti setiap x pada f(x) dengan (x + h), lalu jabarkan.",
+            "Ganti setiap x pada f(x) dengan (x + h), lalu jabarkan. Artinya kita melangkah sejauh h ke kanan, lalu melihat tinggi kurvanya di sana.",
             vec![format!("f(x+h) = {}", el.replace('x', "(x+h)")), format!("= {}", poly_latex(&fxh))],
             String::new(),
         ),
         st(
             "Hitung f(x + h) − f(x)",
             "",
-            "Kurangkan f(x). Suku yang tidak memuat h saling menghapus, sehingga setiap suku yang tersisa memuat h.",
+            "Kurangkan f(x) untuk mendapat 'tambahan tinggi' saat melangkah sejauh h. Suku yang tidak memuat h saling menghapus, sehingga setiap suku yang tersisa memuat h.\nIni penting: tanpa itu, h tidak bisa dicoret di langkah berikutnya.",
             vec![
                 format!("f(x+h)-f(x) = \\left({}\\right) - \\left({}\\right)", poly_latex(&fxh), poly_latex(&fx)),
                 format!("= {}", poly_latex(&diff)),
@@ -177,7 +177,7 @@ pub fn by_definition(e: &Expr) -> Result<(Expr, Vec<Step>), String> {
         st(
             "Bagi dengan h",
             "",
-            "Setiap suku memuat h, jadi h bisa dikeluarkan dan dicoret dengan h di penyebut.",
+            "Setiap suku memuat h, jadi h bisa dikeluarkan lalu dicoret dengan h di penyebut. Inilah trik yang membuat limitnya tidak lagi berbentuk 0/0.",
             vec![
                 format!("\\frac{{f(x+h)-f(x)}}{{h}} = \\frac{{{}}}{{h}}", poly_latex(&diff)),
                 format!("= {}", poly_latex(&quot)),
@@ -187,7 +187,7 @@ pub fn by_definition(e: &Expr) -> Result<(Expr, Vec<Step>), String> {
         st(
             "Ambil limit h → 0",
             "",
-            "Sekarang h boleh diganti 0. Semua suku yang masih memuat h menjadi 0, dan yang tersisa adalah turunannya.",
+            "Sekarang h aman diganti 0. Semua suku yang masih memuat h lenyap, dan yang tersisa adalah turunannya: kemiringan garis singgung di setiap titik x.",
             vec![format!("f'(x) = \\lim_{{h\\to 0}}\\left({}\\right) = {}", poly_latex(&quot), poly_latex(&lim))],
             poly_latex(&lim),
         ),
@@ -216,21 +216,21 @@ pub fn by_expansion(e: &Expr) -> Result<(Expr, Vec<Step>), String> {
         st(
             "Jabarkan fungsi",
             "",
-            "Alih-alih memakai aturan perkalian atau aturan rantai, jabarkan dulu fungsinya menjadi jumlah suku-suku berpangkat x. Setelah itu tiap suku mudah diturunkan.",
+            "Alih-alih memakai aturan perkalian atau aturan rantai, kita ratakan dulu fungsinya menjadi jumlah suku-suku berpangkat x. Setelah rata, tiap suku mudah diturunkan satu per satu.\nCara ini cocok kalau soal meminta penjabaran, atau kalau kamu ingin memeriksa hasil dengan jalur lain.",
             vec![format!("f(x) = {}", e.latex()), format!("= {}", poly_latex(&fx))],
             String::new(),
         ),
         st(
             "Turunkan tiap suku",
             r"(c\,x^{n})' = c\,n\,x^{n-1}",
-            "Setiap suku c·xⁿ diturunkan dengan aturan pangkat: pangkat n turun menjadi pengali dan pangkat baru n − 1. Suku konstanta turunannya 0.",
+            "Setiap suku c·xⁿ diturunkan dengan aturan pangkat: pangkat n turun menjadi pengali (ikut dikalikan dengan c), dan pangkat barunya n − 1.\nSuku konstanta turunannya 0, karena nilainya tidak pernah berubah.",
             lines,
             String::new(),
         ),
         st(
             "Gabungkan hasilnya",
             "",
-            "Jumlahkan turunan semua suku.",
+            "Jumlahkan turunan semua suku tadi, dan jadilah turunan fungsinya. Coba cocokkan dengan hasil metode 'Aturan turunan': harus sama!",
             vec![format!("f'(x) = {}", poly_latex(&dp))],
             poly_latex(&dp),
         ),

@@ -61,11 +61,30 @@ pub fn solve_with(input: &str, order: usize, method: Method) -> Result<Solution,
         match method {
             Method::Auto => {
                 let d = diff::diff(&cur, &mut steps)?;
-                let simplified = simplify::simplify(&d);
-                if d.latex() != simplified.latex() {
+                let stages = simplify::simplify_stages(&d);
+                let simplified = stages.last().cloned().unwrap_or_else(|| d.clone());
+                // Bentuk-bentuk antara yang benar-benar berbeda, supaya pembaca melihat
+                // "dari mana ke mana" dan bukan lompatan langsung ke hasil akhir.
+                let mut shown: Vec<String> = vec![d.latex()];
+                for st in stages.iter().skip(1) {
+                    let t = st.latex();
+                    if Some(&t) != shown.last() {
+                        shown.push(t);
+                    }
+                }
+                if shown.len() > 1 {
                     let mut s = Step::marker("Sederhanakan".to_string(), String::new());
-                    s.why = "Rapikan hasil: hitung perkalian, gabungkan suku sejenis, dan buang bentuk seperti 1·x atau x¹.".to_string();
-                    s.details = vec![format!("{} = {}", d.latex(), simplified.latex())];
+                    s.why = "Hasil mentah dari langkah sebelumnya nilainya sudah benar, hanya bentuknya masih berantakan. Di sini kita merapikannya sedikit demi sedikit: hitung perkalian angka (misalnya 4 \u{b7} 5 menjadi 20), gabungkan suku sejenis, dan buang bentuk basa-basi seperti 1\u{b7}x atau x\u{b9}.\nSetiap baris di bawah adalah satu putaran perapian. Nilainya tidak berubah, hanya penampilannya.".to_string();
+                    s.details = if shown.len() == 2 {
+                        vec![format!("\\text{{Sebelum: }}{}", shown[0]), format!("\\text{{Sesudah: }}{}", shown[1])]
+                    } else {
+                        shown
+                            .iter()
+                            .enumerate()
+                            .map(|(k, t)| if k == 0 { format!("\\text{{Sebelum: }}{}", t) } else { format!("\\text{{Rapikan {}: }}{}", k, t) })
+                            .collect()
+                    };
+                    s.result = simplified.latex();
                     steps.push(s);
                 }
                 cur = simplified;
@@ -173,7 +192,7 @@ mod tests {
     fn langkah_terperinci() {
         let s = solve("7x^2 cos 10x", 1).unwrap();
         assert_eq!(s.steps[0].rule, "Aturan perkalian");
-        assert_eq!(s.steps[0].details.len(), 5);
+        assert_eq!(s.steps[0].details.len(), 3);
         assert!(s.steps.iter().any(|t| t.rule == "Aturan rantai" && t.depth == 1));
         assert_eq!(s.steps.last().unwrap().rule, "Sederhanakan");
         let all: String = s.steps.iter().flat_map(|t| t.details.clone()).collect::<Vec<_>>().join(" | ");
@@ -203,9 +222,23 @@ mod tests {
     }
 
     #[test]
+    fn alur_rencana_rincian_gabungkan() {
+        let s = solve("7x^2 cos 10x", 1).unwrap();
+        let plan = s.steps.iter().position(|t| t.rule == "Aturan perkalian").unwrap();
+        let merge = s.steps.iter().position(|t| t.rule == "Gabungkan: Aturan perkalian").unwrap();
+        assert!(merge > plan + 1, "rincian anak harus berada di antara rencana dan gabungan");
+        assert_eq!(s.steps[merge].depth, 0);
+        assert!(s.steps[plan].result.is_empty());
+        assert!(!s.steps[merge].result.is_empty());
+        let last = s.steps.last().unwrap();
+        assert_eq!(last.rule, "Sederhanakan");
+        assert!(last.details.len() >= 2 && last.details[0].contains("Sebelum"));
+    }
+
+    #[test]
     fn rujukan_langkah() {
         let s = solve("7x^2 cos 10x", 1).unwrap();
-        assert!(s.steps[0].details.iter().any(|d| d.contains("hasil langkah 2")));
+        assert!(s.steps.iter().any(|t| t.details.iter().any(|d| d.contains("hasil langkah 2"))));
         assert!(s.steps[0].why.contains("hasil kali"));
     }
 
