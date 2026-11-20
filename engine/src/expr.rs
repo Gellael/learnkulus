@@ -84,6 +84,23 @@ fn fmt_num(n: f64) -> String {
     }
 }
 
+fn neg_lead(e: &Expr) -> bool {
+    match e {
+        Expr::Neg(_) => true,
+        Expr::Num(n) => *n < 0.0,
+        Expr::Mul(a, _) => neg_lead(a),
+        _ => false,
+    }
+}
+
+fn starts_num(e: &Expr) -> bool {
+    match e {
+        Expr::Num(_) => true,
+        Expr::Mul(a, _) | Expr::Pow(a, _) => starts_num(a),
+        _ => false,
+    }
+}
+
 fn prec(e: &Expr) -> u8 {
     match e {
         Expr::Num(n) if *n < 0.0 => 1,
@@ -120,14 +137,27 @@ impl Expr {
             Expr::Num(n) => fmt_num(*n),
             Expr::X => "x".to_string(),
             Expr::Neg(a) => format!("-{}", a.tex(2)),
-            Expr::Add(a, b) => format!("{} + {}", a.tex(1), b.tex(1)),
-            Expr::Sub(a, b) => format!("{} - {}", a.tex(1), b.tex(2)),
-            Expr::Mul(a, b) => match (&**a, &**b) {
-                (Expr::Num(n), r) if !matches!(r, Expr::Num(_)) => {
-                    format!("{}{}", fmt_num(*n), r.tex(2))
-                }
-                _ => format!("{} \\cdot {}", a.tex(2), b.tex(2)),
+            Expr::Add(a, b) => match &**b {
+                Expr::Neg(c) => format!("{} - {}", a.tex(1), c.tex(2)),
+                _ => format!("{} + {}", a.tex(1), b.tex(1)),
             },
+            Expr::Sub(a, b) => format!("{} - {}", a.tex(1), b.tex(2)),
+            Expr::Mul(a, b) => {
+                let neg_b = neg_lead(b);
+                match (&**a, &**b) {
+                    (Expr::Num(n), r) if !matches!(r, Expr::Num(_)) && !neg_b && !starts_num(r) => {
+                        format!("{}{}", fmt_num(*n), r.tex(2))
+                    }
+                    _ => {
+                        let bt = if neg_b {
+                            format!("\\left({}\\right)", b.tex(0))
+                        } else {
+                            b.tex(2)
+                        };
+                        format!("{} \\cdot {}", a.tex(2), bt)
+                    }
+                }
+            }
             Expr::Div(a, b) => format!("\\frac{{{}}}{{{}}}", a.tex(0), b.tex(0)),
             Expr::Pow(a, b) => format!("{}^{{{}}}", a.tex(5), b.tex(0)),
             Expr::Call(F::Sqrt, a) => format!("\\sqrt{{{}}}", a.tex(0)),

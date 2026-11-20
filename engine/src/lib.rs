@@ -30,14 +30,16 @@ pub fn solve(input: &str, order: usize) -> Result<Solution, String> {
     let mut steps = Vec::new();
     for k in 1..=order {
         if order > 1 {
-            steps.push(Step {
-                rule: format!("Turunan ke-{}", k),
-                formula: String::new(),
-                applied_to: cur.latex(),
-            });
+            steps.push(Step::marker(format!("Turunan ke-{}", k), cur.latex()));
         }
         let d = diff::diff(&cur, &mut steps)?;
-        cur = simplify::simplify(&d);
+        let simplified = simplify::simplify(&d);
+        if d.latex() != simplified.latex() {
+            let mut s = Step::marker("Sederhanakan".to_string(), String::new());
+            s.details = vec![format!("{} = {}", d.latex(), simplified.latex())];
+            steps.push(s);
+        }
+        cur = simplified;
     }
     Ok(Solution {
         input_latex,
@@ -120,6 +122,7 @@ mod tests {
         let s = solve("(x^2+3)^5", 1).unwrap();
         assert!(s.steps.iter().any(|st| st.rule.contains("rantai")));
         assert!(s.derivative_latex.contains("10"));
+        assert!(s.steps.iter().any(|st| st.depth > 0));
         println!("{}", s.derivative_latex);
     }
 
@@ -133,6 +136,22 @@ mod tests {
             }
         }
         assert!(generator::generate("zzz", 1).is_err());
+    }
+
+    #[test]
+    fn langkah_terperinci() {
+        let s = solve("7x^2 cos 10x", 1).unwrap();
+        assert_eq!(s.steps[0].rule, "Aturan perkalian");
+        assert_eq!(s.steps[0].details.len(), 5);
+        assert!(s.steps.iter().any(|t| t.rule == "Aturan rantai" && t.depth == 1));
+        assert_eq!(s.steps.last().unwrap().rule, "Sederhanakan");
+        let all: String = s.steps.iter().flat_map(|t| t.details.clone()).collect::<Vec<_>>().join(" | ");
+        assert!(all.contains("u = 7x^{2}"));
+        assert!(all.contains("14x"));
+        assert!(check_derivative("7x^2 cos 10x", "14x cos 10x - 70x^2 sin 10x", 1).unwrap());
+        for t in &s.steps {
+            println!("{}{} | {:?} | {}", "  ".repeat(t.depth), t.rule, t.details, t.result);
+        }
     }
 
     #[test]

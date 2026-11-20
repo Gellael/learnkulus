@@ -38,7 +38,16 @@ fn solution_json(expr: &str, order: usize) -> std::result::Result<Value, String>
     let steps: Vec<Value> = s
         .steps
         .iter()
-        .map(|t| json!({ "rule": t.rule, "formula": t.formula, "appliedTo": t.applied_to }))
+        .map(|t| {
+            json!({
+                "rule": t.rule,
+                "formula": t.formula,
+                "appliedTo": t.applied_to,
+                "details": t.details,
+                "result": t.result,
+                "depth": t.depth
+            })
+        })
         .collect();
     Ok(json!({ "input": s.input_latex, "derivative": s.derivative_latex, "steps": steps }))
 }

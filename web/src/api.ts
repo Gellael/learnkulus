@@ -1,6 +1,13 @@
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
 
-export type Step = { rule: string; formula: string; appliedTo: string }
+export type Step = {
+  rule: string
+  formula: string
+  appliedTo: string
+  details: string[]
+  result: string
+  depth: number
+}
 export type Solution = { input: string; derivative: string; steps: Step[] }
 export type Problem = { topic: string; seed: number; expr: string; latex: string }
 export type CheckResult = { correct: boolean; solution: Solution }

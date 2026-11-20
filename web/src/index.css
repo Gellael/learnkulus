@@ -113,3 +113,12 @@ footer p { margin: 2px 0; }
   aside li { margin: 0; }
   .side { width: auto; }
 }
+
+.steps-title { margin: 0 0 12px; }
+.steplist { list-style: none; margin: 0; padding: 0; }
+.stepitem { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+.stepitem .num { margin-right: 0; margin-top: 2px; }
+.step-body { min-width: 0; overflow-x: auto; }
+.detail { padding-left: 4px; }
+.partial { margin-top: 4px; font-size: .95rem; color: var(--good); }
+.final-label { margin: 18px 0 6px; font-weight: 600; }
