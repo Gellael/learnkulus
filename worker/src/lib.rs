@@ -62,7 +62,7 @@ async fn fetch(mut req: Request, _env: Env, _ctx: Context) -> Result<Response> {
     }
     let path = req.path();
     let resp = match (req.method(), path.as_str()) {
-        (Method::Get, "/") => Response::ok("kalkulus api"),
+        (Method::Get, "/") => Response::ok("learnkulus api"),
 
         // Soal acak dari topik + seed. Kunci TIDAK dikirim.
         (Method::Get, "/problem") => {

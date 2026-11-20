@@ -1,4 +1,4 @@
-export type Page = 'home' | 'materi' | 'practice' | 'solver'
+export type Page = 'home' | 'materi' | 'practice' | 'solver' | 'about'
 export type Go = (p: Page, opt?: { lesson?: number; topic?: string }) => void
 
 export type Lesson = {

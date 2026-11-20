@@ -74,7 +74,7 @@ pub fn solve_with(input: &str, order: usize, method: Method) -> Result<Solution,
                 }
                 if shown.len() > 1 {
                     let mut s = Step::marker("Sederhanakan".to_string(), String::new());
-                    s.why = "Hasil mentah dari langkah sebelumnya nilainya sudah benar, hanya bentuknya masih berantakan. Di sini kita merapikannya sedikit demi sedikit: hitung perkalian angka (misalnya 4 \u{b7} 5 menjadi 20), gabungkan suku sejenis, dan buang bentuk basa-basi seperti 1\u{b7}x atau x\u{b9}.\nSetiap baris di bawah adalah satu putaran perapian. Nilainya tidak berubah, hanya penampilannya.".to_string();
+                    s.why = "Hasil dari langkah sebelumnya sudah benar, tetapi bentuknya masih mentah. Perapian tidak mengubah nilai, hanya penampilannya.\nCara: hitung perkalian angka (4 \u{b7} 5 menjadi 20), gabungkan suku sejenis, dan buang bentuk 1\u{b7}x atau x\u{b9}.\nTiap baris di bawah adalah satu putaran perapian.".to_string();
                     s.details = if shown.len() == 2 {
                         vec![format!("\\text{{Sebelum: }}{}", shown[0]), format!("\\text{{Sesudah: }}{}", shown[1])]
                     } else {
