@@ -7,6 +7,7 @@ import Secant from './Secant'
 import Solver from './Solver'
 import Tentang from './Tentang'
 import Tex from './Tex'
+import ThemeToggle from './ThemeToggle'
 import './index.css'
 
 const NAV: { page: Page; label: string }[] = [
@@ -22,7 +23,6 @@ const TITLES: Record<Page, string> = {
   solver: 'Penyelesai | learnkulus',
   about: 'Tentang | learnkulus',
 }
-const TINTS = ['#e3dcff', '#ffe0d8', '#d6ebff', '#cdf3e6', '#ffdbec', '#fff0a8', '#e3dcff']
 
 export default function App() {
   const [page, setPage] = useState<Page>('home')
@@ -54,6 +54,7 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <ThemeToggle />
       </div>
 
       {page === 'home' && (
@@ -92,7 +93,7 @@ export default function App() {
             <ol className="lessons">
               {LESSONS.map((l, i) => (
                 <li key={l.id}>
-                  <button className="lesson-card" style={{ background: TINTS[i % TINTS.length] }} onClick={() => go('materi', { lesson: i })}>
+                  <button className="lesson-card" style={{ background: `var(--tint-${i % 7})` }} onClick={() => go('materi', { lesson: i })}>
                     <span className="big">{i + 1}</span>
                     <strong>{l.title}</strong>
                     <span className="muted">{l.summary}</span>
