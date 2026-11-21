@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react'
 import { check, getProblem, type CheckResult, type Problem } from './api'
+import { useI18n } from './i18n'
 import Steps from './Steps'
 import Tex from './Tex'
 
-const TOPICS: Record<string, string> = {
-  power: 'Aturan pangkat',
-  product: 'Aturan perkalian',
-  quotient: 'Aturan hasil bagi',
-  chain: 'Aturan rantai',
-  trig: 'Trigonometri',
-}
+const TOPICS = ['power', 'product', 'quotient', 'chain', 'trig']
 
 const load = (k: string) => Number(localStorage.getItem(k) ?? 0)
 
 export default function Practice({ initialTopic = 'power' }: { initialTopic?: string }) {
+  const { lang, t } = useI18n()
   const [topic, setTopic] = useState(initialTopic)
   const [problem, setProblem] = useState<Problem | null>(null)
   const [answer, setAnswer] = useState('')
@@ -22,12 +18,12 @@ export default function Practice({ initialTopic = 'power' }: { initialTopic?: st
   const [xp, setXp] = useState(() => load('xp'))
   const [streak, setStreak] = useState(() => load('streak'))
 
-  async function next(t = topic) {
+  async function next(tp = topic) {
     setResult(null)
     setAnswer('')
     setErr('')
     try {
-      setProblem(await getProblem(t, Math.floor(Math.random() * 1_000_000)))
+      setProblem(await getProblem(tp, Math.floor(Math.random() * 1_000_000)))
     } catch (e) {
       setErr((e as Error).message)
     }
@@ -37,6 +33,21 @@ export default function Practice({ initialTopic = 'power' }: { initialTopic?: st
     next()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Bahasa berganti: ambil ulang pembahasan dalam bahasa baru (tanpa mengubah XP atau streak).
+  useEffect(() => {
+    if (!problem || !result) return
+    let off = false
+    check(problem.topic, problem.seed, answer)
+      .then((r) => {
+        if (!off) setResult(r)
+      })
+      .catch(() => {})
+    return () => {
+      off = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang])
 
   async function submit() {
     if (!problem) return
@@ -57,7 +68,7 @@ export default function Practice({ initialTopic = 'power' }: { initialTopic?: st
 
   return (
     <section>
-      <h2>Latihan</h2>
+      <h2>{t('practice.title')}</h2>
       <div className="row">
         <select
           value={topic}
@@ -66,12 +77,12 @@ export default function Practice({ initialTopic = 'power' }: { initialTopic?: st
             next(e.target.value)
           }}
         >
-          {Object.entries(TOPICS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
+          {TOPICS.map((k) => (
+            <option key={k} value={k}>{t(`topic.${k}`)}</option>
           ))}
         </select>
-        <div className="hud" title="Tersimpan di browser ini">
-          <span className="lvl">Level {Math.floor(xp / 50) + 1}</span>
+        <div className="hud" title={t('practice.stored')}>
+          <span className="lvl">{t('practice.level')} {Math.floor(xp / 50) + 1}</span>
           <span className="bar"><span style={{ width: `${(xp % 50) * 2}%` }} /></span>
           <span className="xp">{xp} XP</span>
           <span className="streak">Streak {streak}</span>
@@ -80,17 +91,17 @@ export default function Practice({ initialTopic = 'power' }: { initialTopic?: st
       </div>
       {problem && (
         <div className="card">
-          <p>Tentukan f'(x) jika</p>
+          <p>{t('practice.ask')}</p>
           <Tex block tex={`f(x) = ${problem.latex}`} />
           <div className="row">
             <input
-              placeholder="contoh: 3x^2 - 2x"
+              placeholder={t('practice.placeholder')}
               value={answer}
               disabled={!!result}
               onChange={(e) => setAnswer(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !result && submit()}
             />
-            {!result ? <button onClick={submit} disabled={!answer.trim()}>Periksa</button> : <button onClick={() => next()}>Soal berikutnya</button>}
+            {!result ? <button onClick={submit} disabled={!answer.trim()}>{t('practice.check')}</button> : <button onClick={() => next()}>{t('practice.next')}</button>}
           </div>
         </div>
       )}
@@ -98,7 +109,7 @@ export default function Practice({ initialTopic = 'power' }: { initialTopic?: st
       {result && (
         <>
           <p className={result.correct ? 'ok pop' : 'error'}>
-            {result.correct ? 'Benar! +10 XP. Pola ini sudah kamu kuasai.' : 'Belum tepat, tidak apa-apa. Salah itu bagian dari belajar. Yuk lihat di mana beloknya:'}
+            {result.correct ? t('practice.correct') : t('practice.wrong')}
           </p>
           <Steps sol={result.solution} />
         </>

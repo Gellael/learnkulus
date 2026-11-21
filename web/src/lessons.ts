@@ -1,3 +1,5 @@
+import type { Lang } from './i18n'
+
 export type Page = 'home' | 'materi' | 'practice' | 'solver' | 'about'
 export type Go = (p: Page, opt?: { lesson?: number; topic?: string }) => void
 
@@ -14,7 +16,7 @@ export type Lesson = {
 
 const r = String.raw
 
-export const LESSONS: Lesson[] = [
+const ID_LESSONS: Lesson[] = [
   {
     id: 'pengantar',
     title: 'Apa itu turunan?',
@@ -209,3 +211,202 @@ export const LESSONS: Lesson[] = [
     tip: 'Di halaman Penyelesai kamu bisa memilih turunan sampai orde 5 dan melihat setiap tahapnya. Ingat: turunan terus mengecilkan pangkat, jadi polinomial akhirnya menjadi konstanta lalu nol.',
   },
 ]
+
+const EN_LESSONS: Lesson[] = [
+  {
+    id: 'pengantar',
+    title: 'What is a derivative?',
+    summary: 'The slope of the tangent line and the rate of change',
+    intro:
+      'Imagine riding a motorbike. The speedometer does not show the total distance, but how fast your position is changing at that very second. That is the derivative: a measure of how fast the value of a function changes at a single point. On a graph, the derivative is the slope of the tangent line. Getting it is clever: draw a secant line through two points a distance h apart, then bring the two points together until h approaches zero. The secant line "merges" into the tangent line (try sliding the slider on the Home page!).',
+    rules: [{ name: 'Definition of the derivative', tex: r`f'(x)=\lim_{h\to 0}\frac{f(x+h)-f(x)}{h}` }],
+    examples: [
+      {
+        q: r`f(x)=x^{2}`,
+        steps: [
+          r`f'(x)=\lim_{h\to0}\frac{(x+h)^2-x^2}{h}`,
+          r`=\lim_{h\to0}\frac{x^2+2xh+h^2-x^2}{h}=\lim_{h\to0}\frac{2xh+h^2}{h}`,
+          r`=\lim_{h\to0}(2x+h)`,
+        ],
+        ans: r`f'(x)=2x`,
+      },
+    ],
+    tip: 'How to read the result: a positive derivative means the graph is rising, a negative one means it is falling, and zero means the graph is momentarily flat (a peak or a valley). The rules in the next lessons are shortcuts from this definition, so you do not have to compute a limit every time.',
+  },
+  {
+    id: 'pangkat',
+    title: 'Power rule and sum rule',
+    summary: 'Derivative of x to the power n, constants, sums, and differences',
+    intro:
+      'This is the basic move you will use again and again. The exponent "comes down" as a multiplier in front, then the new exponent is one less. Constants? They stay put, their derivative is zero. Terms that are added or subtracted can be differentiated one by one. Met a root or a fraction? Turn it into a power first: the square root of x is x to the power one half, and 1/x² is x to the power minus two.',
+    rules: [
+      { name: 'Power', tex: r`(x^{n})'=n\,x^{n-1}` },
+      { name: 'Constant', tex: r`(c)'=0,\qquad (c\,u)'=c\,u'` },
+      { name: 'Sum and difference', tex: r`(u\pm v)'=u'\pm v'` },
+    ],
+    examples: [
+      {
+        q: r`f(x)=3x^{4}-2x^{2}+7`,
+        steps: [
+          r`(3x^{4})'=3\cdot 4x^{3}=12x^{3}`,
+          r`(-2x^{2})'=-2\cdot 2x=-4x`,
+          r`(7)'=0`,
+          r`f'(x)=12x^{3}-4x+0`,
+        ],
+        ans: r`f'(x)=12x^{3}-4x`,
+      },
+      {
+        q: r`f(x)=\dfrac{1}{x^{2}}`,
+        steps: [r`f(x)=x^{-2}\quad\text{(rewrite as a power)}`, r`f'(x)=-2x^{-3}`],
+        ans: r`f'(x)=-\dfrac{2}{x^{3}}`,
+      },
+      {
+        q: r`f(x)=\sqrt{x}`,
+        steps: [r`f(x)=x^{1/2}\quad\text{(root = power one half)}`, r`f'(x)=\tfrac{1}{2}x^{-1/2}`],
+        ans: r`f'(x)=\dfrac{1}{2\sqrt{x}}`,
+      },
+    ],
+    tip: 'Quick mantra: "multiply by the exponent, then reduce the exponent". Self-check: the derivative of x is 1, because x = x¹ becomes 1·x⁰ = 1.',
+    practice: 'power',
+  },
+  {
+    id: 'perkalian',
+    title: 'Product rule',
+    summary: 'Derivative of two functions multiplied together',
+    intro:
+      'The biggest temptation: differentiating the two factors and then multiplying them. Do not! If f(x) = x · x = x², the derivative is 2x, while 1 · 1 is only 1. Both factors are moving, so take turns: differentiate the first factor while the second stays still, then differentiate the second factor while the first stays still, then add the two.',
+    rules: [{ name: 'Product', tex: r`(u\,v)'=u'v+u\,v'` }],
+    examples: [
+      {
+        q: r`f(x)=(x^{2}+1)(x-3)`,
+        steps: [
+          r`u=x^{2}+1,\;u'=2x`,
+          r`v=x-3,\;v'=1`,
+          r`f'(x)=2x(x-3)+(x^{2}+1)(1)`,
+          r`=2x^{2}-6x+x^{2}+1`,
+        ],
+        ans: r`f'(x)=3x^{2}-6x+1`,
+      },
+      {
+        q: r`f(x)=x^{3}(2x+1)`,
+        steps: [
+          r`u=x^{3},\;u'=3x^{2}`,
+          r`v=2x+1,\;v'=2`,
+          r`f'(x)=3x^{2}(2x+1)+x^{3}\cdot 2`,
+          r`=6x^{3}+3x^{2}+2x^{3}`,
+        ],
+        ans: r`f'(x)=8x^{3}+3x^{2}`,
+      },
+    ],
+    tip: 'How to check: if the expression is easy to expand, expand it first and then differentiate with the power rule. Second example: x³(2x+1) = 2x⁴ + x³, whose derivative is 8x³ + 3x². Same result, right?',
+    practice: 'product',
+  },
+  {
+    id: 'hasil-bagi',
+    title: 'Quotient rule',
+    summary: 'Derivative of a fraction whose numerator and denominator contain x',
+    intro:
+      'For fractions, the pattern is easy to remember if you know the story: bottom times derivative of top, minus top times derivative of bottom, all over bottom squared. The order of the subtraction matters. If you swap it, the sign of your result flips!',
+    rules: [{ name: 'Quotient', tex: r`\left(\frac{u}{v}\right)'=\frac{u'v-u\,v'}{v^{2}}` }],
+    examples: [
+      {
+        q: r`f(x)=\dfrac{x}{x^{2}+4}`,
+        steps: [
+          r`u=x,\;u'=1`,
+          r`v=x^{2}+4,\;v'=2x`,
+          r`f'(x)=\dfrac{1\cdot(x^{2}+4)-x\cdot 2x}{(x^{2}+4)^{2}}`,
+          r`=\dfrac{x^{2}+4-2x^{2}}{(x^{2}+4)^{2}}`,
+        ],
+        ans: r`f'(x)=\dfrac{4-x^{2}}{(x^{2}+4)^{2}}`,
+      },
+      {
+        q: r`f(x)=\dfrac{x^{2}+1}{x-1}`,
+        steps: [
+          r`u=x^{2}+1,\;u'=2x`,
+          r`v=x-1,\;v'=1`,
+          r`f'(x)=\dfrac{2x(x-1)-(x^{2}+1)\cdot 1}{(x-1)^{2}}`,
+          r`=\dfrac{2x^{2}-2x-x^{2}-1}{(x-1)^{2}}`,
+        ],
+        ans: r`f'(x)=\dfrac{x^{2}-2x-1}{(x-1)^{2}}`,
+      },
+    ],
+    tip: 'If the denominator is just a number (for example x²/3), you do not need this rule. Just write it as (1/3)x² and use the power rule.',
+    practice: 'quotient',
+  },
+  {
+    id: 'rantai',
+    title: 'Chain rule',
+    summary: 'Derivative of a function inside a function',
+    intro:
+      'Imagine a matryoshka doll: a small doll inside a bigger one. For a function inside a function, open the outer layer first (differentiate the outer part while leaving its contents intact), then multiply by the derivative of the contents. This rule is most often used together with other rules, so it is also a frequent source of mistakes.',
+    rules: [
+      { name: 'Chain', tex: r`\big(f(g(x))\big)'=f'(g(x))\cdot g'(x)` },
+      { name: 'Power with chain', tex: r`(u^{n})'=n\,u^{n-1}\cdot u'` },
+      { name: 'Root with chain', tex: r`(\sqrt{u})'=\frac{u'}{2\sqrt{u}}` },
+    ],
+    examples: [
+      {
+        q: r`f(x)=(x^{2}+3)^{5}`,
+        steps: [r`u=x^{2}+3,\;u'=2x`, r`f'(x)=5u^{4}\cdot u'`, r`=5(x^{2}+3)^{4}\cdot 2x`],
+        ans: r`f'(x)=10x(x^{2}+3)^{4}`,
+      },
+      {
+        q: r`f(x)=\sin 3x`,
+        steps: [r`u=3x,\;u'=3`, r`f'(x)=\cos(3x)\cdot 3`],
+        ans: r`f'(x)=3\cos 3x`,
+      },
+      {
+        q: r`f(x)=\sqrt{x^{2}+1}`,
+        steps: [r`u=x^{2}+1,\;u'=2x`, r`f'(x)=\dfrac{2x}{2\sqrt{x^{2}+1}}`],
+        ans: r`f'(x)=\dfrac{x}{\sqrt{x^{2}+1}}`,
+      },
+    ],
+    tip: 'Two magic questions: "which part is outside, which is inside?" and then "have I multiplied by the derivative of the inside?" Forgetting to multiply by u′ is the number one mistake in this lesson.',
+    practice: 'chain',
+  },
+  {
+    id: 'trigonometri',
+    title: 'Derivatives of trigonometric functions',
+    summary: 'sin, cos, tan, sec, csc, and cot',
+    intro:
+      'There are six basic derivatives to memorize. The memory trick: functions starting with "co" (cos, csc, cot) always have a negative derivative. If the argument is not plain x, combine with the chain rule: differentiate the trigonometric function, then multiply by the derivative of its argument.',
+    rules: [
+      { name: 'sin and cos', tex: r`(\sin x)'=\cos x,\qquad (\cos x)'=-\sin x` },
+      { name: 'tan and sec', tex: r`(\tan x)'=\sec^{2}x,\qquad (\sec x)'=\sec x\tan x` },
+      { name: 'cot and csc', tex: r`(\cot x)'=-\csc^{2}x,\qquad (\csc x)'=-\csc x\cot x` },
+    ],
+    examples: [
+      {
+        q: r`f(x)=x^{2}\cos x`,
+        steps: [r`u=x^{2},\;u'=2x`, r`v=\cos x,\;v'=-\sin x`, r`f'(x)=2x\cos x+x^{2}(-\sin x)`],
+        ans: r`f'(x)=2x\cos x-x^{2}\sin x`,
+      },
+      {
+        q: r`f(x)=\cos(x^{2})`,
+        steps: [r`u=x^{2},\;u'=2x`, r`f'(x)=-\sin(x^{2})\cdot 2x`],
+        ans: r`f'(x)=-2x\sin(x^{2})`,
+      },
+    ],
+    tip: 'The pair that is easy to mix up: the derivative of sin is cos (positive), the derivative of cos is MINUS sin. When in doubt, remember that the graph of cos starts at a peak and then goes down, so its initial slope is negative.',
+    practice: 'trig',
+  },
+  {
+    id: 'tingkat-tinggi',
+    title: 'Higher-order derivatives',
+    summary: 'Differentiating the derivative again',
+    intro:
+      'The second derivative is the derivative of the first derivative, and so on. A real example: the position of a car, differentiated once, becomes velocity, and differentiated again becomes acceleration. So the second derivative tells you how the slope itself changes, for example whether you are pressing the gas or the brake.',
+    rules: [{ name: 'Notation', tex: r`f''(x)=\big(f'(x)\big)',\qquad f'''(x)=\big(f''(x)\big)'` }],
+    examples: [
+      {
+        q: r`f(x)=x^{4}-3x^{2}`,
+        steps: [r`f'(x)=4x^{3}-6x`, r`f''(x)=12x^{2}-6`, r`f'''(x)=24x`],
+        ans: r`f''(x)=12x^{2}-6`,
+      },
+    ],
+    tip: 'On the Solver page you can choose derivatives up to order 5 and see every stage. Remember: differentiation keeps reducing the exponent, so a polynomial eventually becomes a constant and then zero.',
+  },
+]
+
+/** Isi materi menurut bahasa; rumus dan contoh hitungannya sama, hanya teksnya yang berbeda. */
+export const lessonsFor = (lang: Lang): Lesson[] => (lang === 'en' ? EN_LESSONS : ID_LESSONS)

@@ -347,11 +347,19 @@ body, .topbar, footer, .card, .tip, .rule, .scanbox, .demo, .stats div, .about-c
 button { transition: transform .1s, box-shadow .1s, background-color .2s, border-color .2s, color .2s; }
 .themebtn { display: inline-grid; place-items: center; width: 42px; height: 42px; padding: 0; border-radius: 50%; background: var(--panel); color: var(--ink); box-shadow: 2px 2px 0 var(--shadow); }
 .themebtn svg { width: 22px; height: 22px; display: block; }
+.topctl { display: flex; align-items: center; gap: 8px; }
+/* saklar bahasa ID | EN */
+.langsw { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; align-items: center; width: 76px; height: 42px; padding: 0; border-radius: 99px; background: var(--panel); color: var(--ink); box-shadow: 2px 2px 0 var(--shadow); }
+.langsw-opt { position: relative; z-index: 1; text-align: center; font-size: .82rem; font-weight: 800; letter-spacing: .02em; transition: color .2s; }
+.langsw-thumb { position: absolute; top: 2px; left: 2px; width: calc(50% - 2px); height: calc(100% - 4px); border-radius: 99px; background: var(--violet); transition: transform .2s; }
+.langsw[aria-checked='true'] .langsw-thumb { transform: translateX(100%); }
+.langsw[aria-checked='false'] .langsw-opt:first-child, .langsw[aria-checked='true'] .langsw-opt:last-child { color: #fff; }
 @media (max-width: 560px) {
   .brandbtn { order: 0; }
-  .themebtn { order: 1; margin-left: auto; }
+  .topctl { order: 1; margin-left: auto; }
   .topnav { order: 2; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .langsw-thumb, .langsw-opt { transition: none; }
   body, .topbar, footer, .card, .tip, .rule, .scanbox, .demo, .stats div, .about-card, .sx-block, .sx-read, .stepcard, input, select, button { transition: none; }
 }

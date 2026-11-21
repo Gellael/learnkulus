@@ -8,11 +8,15 @@
  * dan mencatat apa saja yang diubah supaya pengguna bisa memeriksanya.
  */
 
+export type FixId =
+  | 'xDigits' | 'parenDigits' | 'addParen' | 'dropParen' | 'prefix' | 'rhs' | 'superscript' | 'minus' | 'times' | 'divide'
+  | 'bracket' | 'sqrt' | 'quotes' | 'bar' | 'upperX' | 'letterO' | 'lower' | 'dropChars' | 'letterX' | 'twoAsX' | 'constTrig'
+
 export type Cleaned = {
   /** Ekspresi yang sudah dirapikan, siap ditaruh di kolom f(x). */
   expr: string
-  /** Daftar perubahan yang dilakukan, untuk ditampilkan ke pengguna. */
-  fixes: string[]
+  /** Daftar perubahan yang dilakukan (kunci terjemahan `fix.<id>`), untuk ditampilkan ke pengguna. */
+  fixes: FixId[]
   /** Tebakan lain yang masuk akal kalau `expr` ternyata keliru (bisa kosong). */
   alternatives: string[]
 }
@@ -20,16 +24,16 @@ export type Cleaned = {
 const SUP: Record<string, string> = { '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9' }
 
 /** Pangkat yang menempel ("x2", "(x+1)3"), spasi, tanda di ujung, dan kurung yang tidak seimbang. */
-function normalize(input: string, note: (msg: string) => void): string {
+function normalize(input: string, note: (msg: FixId) => void): string {
   let s = input
   // "x2" -> "x^2": angka yang menempel di belakang x hampir pasti pangkat.
   s = s.replace(/x(\d+)/g, (_m, d) => {
-    note('Angka di belakang x dibaca sebagai pangkat (x2 menjadi x^2)')
+    note('xDigits')
     return `x^${d}`
   })
   // "(x+1)3" -> "(x+1)^3"
   s = s.replace(/\)\s*(\d+)/g, (_m, d) => {
-    note('Angka di belakang kurung tutup dibaca sebagai pangkat')
+    note('parenDigits')
     return `)^${d}`
   })
   // "x^ 2" -> "x^2"
@@ -43,11 +47,11 @@ function normalize(input: string, note: (msg: string) => void): string {
   const close = (s.match(/\)/g) ?? []).length
   if (open > close) {
     s += ')'.repeat(open - close)
-    note('Kurung tutup yang hilang ditambahkan di ujung')
+    note('addParen')
   } else if (close > open) {
     let extra = close - open
     s = s.replace(/\)/g, (m) => (extra-- > 0 ? '' : m))
-    note('Kurung tutup yang berlebih dibuang')
+    note('dropParen')
   }
   return s
 }
@@ -56,7 +60,7 @@ function normalize(input: string, note: (msg: string) => void): string {
  * Fungsi trigonometri yang isinya tanpa x ("sin(52)") nilainya konstan, dan itu hampir tidak pernah
  * dipakai di soal turunan. Biasanya isinya "5x" yang x-nya terbaca 2. Ubah angka 2 di ujung isi menjadi x.
  */
-function fixConstantTrig(input: string, note: (msg: string) => void): string {
+function fixConstantTrig(input: string, note: (msg: FixId) => void): string {
   const fn = '(sin|cos|tan|sec|csc|cot)'
   const swap = (arg: string) => (!arg.includes('x') && /2$/.test(arg) ? arg.slice(0, -1) + 'x' : arg)
   let changed = false
@@ -72,7 +76,7 @@ function fixConstantTrig(input: string, note: (msg: string) => void): string {
     changed = true
     return `${f} ${fixed}`
   })
-  if (changed) note('Fungsi trigonometri dengan isi angka saja (misalnya sin(52)) dianggap salah baca: angka 2 di ujungnya diganti x')
+  if (changed) note('constTrig')
   return s
 }
 
@@ -117,8 +121,8 @@ function recoverX(s: string): { pre: string; norm: string }[] {
 }
 
 export function cleanMath(raw: string): Cleaned {
-  const fixes: string[] = []
-  const note = (msg: string) => {
+  const fixes: FixId[] = []
+  const note = (msg: FixId) => {
     if (!fixes.includes(msg)) fixes.push(msg)
   }
 
@@ -128,31 +132,31 @@ export function cleanMath(raw: string): Cleaned {
   // Buang awalan "f(x) =", "y =", "f(x):" dsb.
   const before = s
   s = s.replace(/^\s*(?:f\s*\(\s*[xX]\s*\)|y)\s*[=:]\s*/i, '')
-  if (s !== before) note('Awalan f(x) = dibuang')
+  if (s !== before) note('prefix')
 
   // Jika masih ada "=", ambil sisi kanan.
   if (s.includes('=')) {
     s = s.slice(s.lastIndexOf('=') + 1).trim()
-    note('Hanya sisi kanan tanda = yang dipakai')
+    note('rhs')
   }
 
   // Pangkat unicode (x², x³) -> ^2, ^3
   s = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => {
-    note('Pangkat kecil (x²) diubah menjadi ^')
+    note('superscript')
     return '^' + [...m].map((c) => SUP[c]).join('')
   })
 
   // Tanda-tanda yang sering salah baca
-  const map: [RegExp, string, string?][] = [
-    [/[−–—‒﹣－]/g, '-', 'Tanda minus diseragamkan'],
-    [/[×✕✖⋅·∙]/g, '*', 'Tanda kali diseragamkan'],
-    [/[÷∕⁄]/g, '/', 'Tanda bagi diseragamkan'],
-    [/[\[{]/g, '(', 'Kurung siku/kurawal diubah menjadi kurung biasa'],
-    [/[\]}]/g, ')', 'Kurung siku/kurawal diubah menjadi kurung biasa'],
-    [/√/g, 'sqrt', 'Akar √ diubah menjadi sqrt'],
-    [/[“”"'‘’`´]/g, '', 'Tanda kutip dibuang'],
-    [/[|¦]/g, '1', 'Garis tegak | dibaca sebagai angka 1'],
-    [/X/g, 'x', 'Huruf X besar diubah menjadi x'],
+  const map: [RegExp, string, FixId?][] = [
+    [/[−–—‒﹣－]/g, '-', 'minus'],
+    [/[×✕✖⋅·∙]/g, '*', 'times'],
+    [/[÷∕⁄]/g, '/', 'divide'],
+    [/[\[{]/g, '(', 'bracket'],
+    [/[\]}]/g, ')', 'bracket'],
+    [/√/g, 'sqrt', 'sqrt'],
+    [/[“”"'‘’`´]/g, '', 'quotes'],
+    [/[|¦]/g, '1', 'bar'],
+    [/X/g, 'x', 'upperX'],
   ]
   for (const [re, to, msg] of map) {
     if (re.test(s)) {
@@ -163,23 +167,23 @@ export function cleanMath(raw: string): Cleaned {
 
   // Huruf O/o yang menempel pada angka hampir pasti angka 0.
   s = s.replace(/(\d)[Oo]/g, (_m, d) => {
-    note('Huruf O di dekat angka dibaca sebagai 0')
+    note('letterO')
     return d + '0'
   })
   s = s.replace(/[Oo](\d)/g, (_m, d) => {
-    note('Huruf O di dekat angka dibaca sebagai 0')
+    note('letterO')
     return '0' + d
   })
 
   // Huruf kapital lain -> kecil (SIN, COS, ...)
   if (/[A-Z]/.test(s)) {
     s = s.toLowerCase()
-    note('Huruf kapital diubah menjadi huruf kecil')
+    note('lower')
   }
 
   // Hanya sisakan karakter yang dipahami parser.
   const kept = s.replace(/[^0-9a-z+\-*/^().\s]/g, '')
-  if (kept !== s) note('Karakter yang tidak dikenal dibuang')
+  if (kept !== s) note('dropChars')
   s = kept
 
   // Huruf x miring sering tidak terbaca sebagai x. Kalau tidak ada x sama sekali,
@@ -189,13 +193,13 @@ export function cleanMath(raw: string): Cleaned {
     const letters = s.replace(/[a-z]+/g, (w) => (w.length === 1 ? 'x' : w))
     if (letters !== s) {
       s = letters
-      note('Huruf tunggal yang tidak dikenal dianggap sebagai x')
+      note('letterX')
     } else {
       const found = recoverX(s)
       if (found.length > 0) {
         s = found[0].pre
         alternatives = found.slice(1, 4).map((c) => c.norm)
-        note('Tidak ada huruf x yang terbaca. Huruf x miring sering terbaca sebagai angka 2, jadi angka 2 dianggap x')
+        note('twoAsX')
       }
     }
   }

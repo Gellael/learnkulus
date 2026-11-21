@@ -1,16 +1,19 @@
 //! Mesin kalkulus: parse -> turunkan (dengan langkah) -> sederhanakan -> cek jawaban.
 //! Tanpa dependensi, jadi bisa dipakai di Cloudflare Worker maupun dikompilasi ke WASM.
+//! Teks pembahasan dan pesan galat tersedia dalam bahasa Indonesia (bawaan) dan Inggris.
 
 pub mod diff;
 pub mod eval;
 pub mod expr;
 pub mod generator;
+pub mod lang;
 pub mod parser;
 pub mod poly;
 pub mod simplify;
 
 pub use diff::Step;
 use expr::Expr;
+pub use lang::Lang;
 
 #[derive(Debug, Clone)]
 pub struct Solution {
@@ -40,27 +43,32 @@ impl Method {
     }
 }
 
-/// Turunan ke-`order` (1..=5) dengan metode otomatis.
+/// Turunan ke-`order` (1..=5) dengan metode otomatis (bahasa Indonesia).
 pub fn solve(input: &str, order: usize) -> Result<Solution, String> {
     solve_with(input, order, Method::Auto)
 }
 
-/// Turunan ke-`order` (1..=5) dengan metode pilihan, lengkap dengan langkah.
+/// Turunan ke-`order` (1..=5) dengan metode pilihan (bahasa Indonesia).
 pub fn solve_with(input: &str, order: usize, method: Method) -> Result<Solution, String> {
+    solve_lang(input, order, method, Lang::Id)
+}
+
+/// Turunan ke-`order` (1..=5) dengan metode dan bahasa pilihan, lengkap dengan langkah.
+pub fn solve_lang(input: &str, order: usize, method: Method, lang: Lang) -> Result<Solution, String> {
     if order == 0 || order > 5 {
-        return Err("Orde turunan harus 1 sampai 5".into());
+        return Err(lang.p("Orde turunan harus 1 sampai 5", "Derivative order must be 1 to 5"));
     }
-    let parsed = parser::parse(input)?;
+    let parsed = parser::parse_lang(input, lang)?;
     let input_latex = parsed.latex();
     let mut cur = parsed;
     let mut steps = Vec::new();
     for k in 1..=order {
         if order > 1 {
-            steps.push(Step::marker(format!("Turunan ke-{}", k), cur.latex()));
+            steps.push(Step::marker(lang.p(format!("Turunan ke-{}", k), format!("Derivative {}", k)), cur.latex()));
         }
         match method {
             Method::Auto => {
-                let d = diff::diff(&cur, &mut steps)?;
+                let d = diff::diff(&cur, &mut steps, lang)?;
                 let stages = simplify::simplify_stages(&d);
                 let simplified = stages.last().cloned().unwrap_or_else(|| d.clone());
                 // Bentuk-bentuk antara yang benar-benar berbeda, supaya pembaca melihat
@@ -73,15 +81,28 @@ pub fn solve_with(input: &str, order: usize, method: Method) -> Result<Solution,
                     }
                 }
                 if shown.len() > 1 {
-                    let mut s = Step::marker("Sederhanakan".to_string(), String::new());
-                    s.why = "Hasil dari langkah sebelumnya sudah benar, tetapi bentuknya masih mentah. Perapian tidak mengubah nilai, hanya penampilannya.\nCara: hitung perkalian angka (4 \u{b7} 5 menjadi 20), gabungkan suku sejenis, dan buang bentuk 1\u{b7}x atau x\u{b9}.\nTiap baris di bawah adalah satu putaran perapian.".to_string();
+                    let mut s = Step::marker(lang.p("Sederhanakan", "Simplify"), String::new());
+                    s.kind = "simplify".to_string();
+                    s.why = lang.p(
+                        "Hasil dari langkah sebelumnya sudah benar, tetapi bentuknya masih mentah. Perapian tidak mengubah nilai, hanya penampilannya.\nCara: hitung perkalian angka (4 \u{b7} 5 menjadi 20), gabungkan suku sejenis, dan buang bentuk 1\u{b7}x atau x\u{b9}.\nTiap baris di bawah adalah satu putaran perapian.",
+                        "The result of the previous step is correct, but its form is still raw. Tidying does not change the value, only the appearance.\nHow: compute number products (4 \u{b7} 5 becomes 20), combine like terms, and drop forms like 1\u{b7}x or x\u{b9}.\nEach row below is one round of tidying.",
+                    );
                     s.details = if shown.len() == 2 {
-                        vec![format!("\\text{{Sebelum: }}{}", shown[0]), format!("\\text{{Sesudah: }}{}", shown[1])]
+                        vec![
+                            format!("\\text{{{}}}{}", lang.p("Sebelum: ", "Before: "), shown[0]),
+                            format!("\\text{{{}}}{}", lang.p("Sesudah: ", "After: "), shown[1]),
+                        ]
                     } else {
                         shown
                             .iter()
                             .enumerate()
-                            .map(|(k, t)| if k == 0 { format!("\\text{{Sebelum: }}{}", t) } else { format!("\\text{{Rapikan {}: }}{}", k, t) })
+                            .map(|(k, t)| {
+                                if k == 0 {
+                                    format!("\\text{{{}}}{}", lang.p("Sebelum: ", "Before: "), t)
+                                } else {
+                                    format!("\\text{{{}}}{}", lang.p(format!("Rapikan {}: ", k), format!("Tidy {}: ", k)), t)
+                                }
+                            })
                             .collect()
                     };
                     s.result = simplified.latex();
@@ -90,7 +111,7 @@ pub fn solve_with(input: &str, order: usize, method: Method) -> Result<Solution,
                 cur = simplified;
             }
             Method::Limit | Method::Expand => {
-                let (d, s) = if method == Method::Limit { poly::by_definition(&cur)? } else { poly::by_expansion(&cur)? };
+                let (d, s) = if method == Method::Limit { poly::by_definition(&cur, lang)? } else { poly::by_expansion(&cur, lang)? };
                 steps.extend(s);
                 cur = simplify::simplify(&d);
             }
@@ -99,10 +120,14 @@ pub fn solve_with(input: &str, order: usize, method: Method) -> Result<Solution,
     Ok(Solution { input_latex, derivative_latex: cur.latex(), derivative: cur, steps })
 }
 
-/// Apakah `answer` setara dengan turunan ke-`order` dari `problem`?
+/// Apakah `answer` setara dengan turunan ke-`order` dari `problem`? (galat dalam bahasa Indonesia)
 pub fn check_derivative(problem: &str, answer: &str, order: usize) -> Result<bool, String> {
-    let sol = solve(problem, order)?;
-    let ans = parser::parse(answer)?;
+    check_derivative_lang(problem, answer, order, Lang::Id)
+}
+
+pub fn check_derivative_lang(problem: &str, answer: &str, order: usize, lang: Lang) -> Result<bool, String> {
+    let sol = solve_lang(problem, order, Method::Auto, lang)?;
+    let ans = parser::parse_lang(answer, lang)?;
     Ok(eval::equivalent(&sol.derivative, &ans))
 }
 
@@ -248,5 +273,40 @@ mod tests {
         assert!(solve("x +", 1).is_err());
         assert!(solve("foo(x)", 1).is_err());
         assert!(solve("2^x", 1).is_err());
+    }
+
+    #[test]
+    fn bahasa_inggris() {
+        let s = solve_lang("7x^2 cos 10x", 1, Method::Auto, Lang::En).unwrap();
+        assert_eq!(s.steps[0].rule, "Product rule");
+        assert_eq!(s.steps[0].kind, "product");
+        assert!(s.steps.iter().any(|t| t.rule == "Combine: Product rule" && t.kind == "merge:product"));
+        assert_eq!(s.steps.last().unwrap().rule, "Simplify");
+        assert_eq!(s.steps.last().unwrap().kind, "simplify");
+        assert!(s.steps[0].why.starts_with("When:"));
+        assert!(solve_lang("", 1, Method::Auto, Lang::En).unwrap_err().contains("empty"));
+        assert!(solve_lang("x", 9, Method::Auto, Lang::En).unwrap_err().contains("order"));
+        assert!(check_derivative_lang("x^2", "2x", 1, Lang::En).unwrap());
+    }
+
+    #[test]
+    fn bahasa_setara_strukturnya() {
+        let probs = ["7x^2 cos 10x", "(x^2+1)/(x-1)", "sin 3x", "sqrt(x^2+1)", "3x^4 - 2x^2 + 7"];
+        for p in probs.iter() {
+            for m in [Method::Auto, Method::Limit, Method::Expand].iter() {
+                let a = solve_lang(p, 2, *m, Lang::Id);
+                let b = solve_lang(p, 2, *m, Lang::En);
+                assert_eq!(a.is_ok(), b.is_ok(), "{} {:?}", p, m);
+                if let (Ok(a), Ok(b)) = (a, b) {
+                    assert_eq!(a.derivative_latex, b.derivative_latex);
+                    assert_eq!(a.steps.len(), b.steps.len());
+                    for (x, y) in a.steps.iter().zip(b.steps.iter()) {
+                        assert_eq!(x.kind, y.kind);
+                        assert_eq!(x.depth, y.depth);
+                        assert_eq!(x.details.len(), y.details.len());
+                    }
+                }
+            }
+        }
     }
 }

@@ -1,7 +1,10 @@
 import Tex from './Tex'
-import { LESSONS, type Go } from './lessons'
+import { useI18n } from './i18n'
+import { lessonsFor, type Go } from './lessons'
 
 export default function Materi({ index, setIndex, go }: { index: number; setIndex: (i: number) => void; go: Go }) {
+  const { lang, t } = useI18n()
+  const LESSONS = lessonsFor(lang)
   const l = LESSONS[index]
   return (
     <div className="materi">
@@ -21,7 +24,7 @@ export default function Materi({ index, setIndex, go }: { index: number; setInde
         <h2>{l.title}</h2>
         <p className="lead">{l.intro}</p>
 
-        <h3>Rumus</h3>
+        <h3>{t('materi.formulas')}</h3>
         {l.rules.map((r) => (
           <div className="rule" key={r.name}>
             <span className="muted">{r.name}</span>
@@ -29,11 +32,11 @@ export default function Materi({ index, setIndex, go }: { index: number; setInde
           </div>
         ))}
 
-        <h3>Contoh</h3>
+        <h3>{t('materi.examples')}</h3>
         {l.examples.map((e, i) => (
           <div className="card" key={i}>
             <p>
-              <strong>Soal:</strong> <Tex tex={e.q} />
+              <strong>{t('materi.problem')}</strong> <Tex tex={e.q} />
             </p>
             <ol className="steps">
               {e.steps.map((s, j) => (
@@ -52,9 +55,9 @@ export default function Materi({ index, setIndex, go }: { index: number; setInde
 
         <div className="row">
           {l.practice ? (
-            <button onClick={() => go('practice', { topic: l.practice })}>Latihan topik ini</button>
+            <button onClick={() => go('practice', { topic: l.practice })}>{t('materi.practiceTopic')}</button>
           ) : (
-            <button onClick={() => go('solver')}>Coba di Penyelesai</button>
+            <button onClick={() => go('solver')}>{t('materi.tryInSolver')}</button>
           )}
           {index < LESSONS.length - 1 && (
             <button
@@ -64,7 +67,7 @@ export default function Materi({ index, setIndex, go }: { index: number; setInde
                 window.scrollTo(0, 0)
               }}
             >
-              Materi berikutnya
+              {t('materi.next')}
             </button>
           )}
         </div>

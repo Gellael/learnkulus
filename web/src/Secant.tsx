@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from './i18n'
 import Tex from './Tex'
 
 const A = 1
@@ -12,6 +13,7 @@ function line(m: number) {
 }
 
 export default function Secant() {
+  const { t } = useI18n()
   const [h, setH] = useState(1.5)
   const slope = 2 * A + h
   const pts = Array.from({ length: 36 }, (_, i) => {
@@ -21,7 +23,7 @@ export default function Secant() {
 
   return (
     <div className="demo">
-      <svg viewBox="0 0 360 240" role="img" aria-label="Garis sekan mendekati garis singgung saat h mengecil">
+      <svg viewBox="0 0 360 240" role="img" aria-label={t('secant.aria')}>
         <line x1={X(-0.5)} y1={Y(0)} x2={355} y2={Y(0)} className="axis" />
         <line x1={X(0)} y1={10} x2={X(0)} y2={Y(0)} className="axis" />
         <polyline points={pts} className="curve" />
@@ -33,13 +35,13 @@ export default function Secant() {
         <text x={X(A + h) + 8} y={Y(f(A + h)) - 6} className="label">Q</text>
       </svg>
       <label className="slider">
-        <span>Jarak h = <strong>{h.toFixed(2)}</strong></span>
+        <span>{t('secant.dist')} <strong>{h.toFixed(2)}</strong></span>
         <input type="range" min="0.02" max="2" step="0.01" value={h} onChange={(e) => setH(+e.target.value)} />
       </label>
       <p className="demo-eq">
         <Tex tex={String.raw`\dfrac{f(1+h)-f(1)}{h}=${slope.toFixed(2)}`} />
       </p>
-      <p className="muted">Untuk f(x) = x² di titik P. Geser h ke kecil: garis sekan (biru) menyatu dengan garis singgung (putus-putus) dan kemiringannya mendekati f′(1) = 2.</p>
+      <p className="muted">{t('secant.caption')}</p>
     </div>
   )
 }

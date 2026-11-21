@@ -1,21 +1,21 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { solve, type MethodId, type Solution } from './api'
-import { scanProblem, type Progress, type ScanResult } from './ocr'
+import { useI18n } from './i18n'
+import { ScanError, scanProblem, type Progress, type ScanResult } from './ocr'
 import Steps from './Steps'
 import Tex from './Tex'
 
-const METHODS: { id: MethodId; label: string; desc: string }[] = [
-  { id: 'auto', label: 'Aturan turunan', desc: 'Jalur utama: aplikasi memilih aturan yang cocok dengan bentuk soal (pangkat, perkalian, hasil bagi, rantai, atau trigonometri) dan menjelaskan kenapa aturan itu dipilih.' },
-  { id: 'limit', label: 'Definisi limit', desc: 'Jalur "dari nol": memakai definisi f′(x) = lim [f(x+h) − f(x)] / h, persis seperti saat turunan pertama kali ditemukan. Hanya untuk polinomial, misalnya 3x^2 - 5x atau (x+1)^3.' },
-  { id: 'expand', label: 'Jabarkan dulu', desc: 'Jalur "ratakan dulu": fungsi dijabarkan menjadi jumlah suku, lalu tiap suku diturunkan dengan aturan pangkat. Hanya untuk polinomial.' },
-]
+const METHODS: MethodId[] = ['auto', 'limit', 'expand']
 const EXAMPLES = ['3x^4 - 2x^2 + 7', '(x^2+1)(x-3)', 'x/(x^2+4)', 'sin 3x', '7x^2 cos 10x', 'sqrt(x^2+1)']
 
 export default function Solver() {
+  const { lang, t } = useI18n()
   const [expr, setExpr] = useState('(x^2+1)(x-3)')
   const [order, setOrder] = useState(1)
   const [method, setMethod] = useState<MethodId>('auto')
   const [sol, setSol] = useState<Solution | null>(null)
+  // Masukan yang menghasilkan `sol`, supaya pembahasan bisa dihitung ulang saat bahasa berganti.
+  const [ran, setRan] = useState<{ e: string; o: number; m: MethodId } | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
@@ -29,6 +29,7 @@ export default function Solver() {
     setErr('')
     try {
       setSol(await solve(e, order, m))
+      setRan({ e, o: order, m })
     } catch (x) {
       setSol(null)
       setErr((x as Error).message)
@@ -36,109 +37,123 @@ export default function Solver() {
     setBusy(false)
   }
 
+  // Bahasa berganti: hitung ulang pembahasan dalam bahasa baru.
+  useEffect(() => {
+    if (!sol || !ran) return
+    let off = false
+    solve(ran.e, ran.o, ran.m)
+      .then((s) => {
+        if (!off) setSol(s)
+      })
+      .catch(() => {})
+    return () => {
+      off = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang])
+
   async function onFile(file?: File) {
     if (!file) return
     setErr('')
     setScan(null)
     setSol(null)
     setReading(true)
-    setProgress({ label: 'Menyiapkan foto...', value: 0 })
+    setProgress({ key: 'preparing', value: 0 })
     try {
       const r = await scanProblem(file, setProgress)
       setExpr(r.expr)
       setScan(r)
     } catch (x) {
-      setErr((x as Error).message)
+      setErr(x instanceof ScanError ? t(x.key) : (x as Error).message)
     }
     setReading(false)
     setProgress(null)
   }
 
-  const current = METHODS.find((m) => m.id === method)!
   const lowConf = scan !== null && scan.confidence < 60
 
   return (
     <section>
-      <h2>Penyelesai turunan</h2>
-      <p className="muted">Ketik fungsi atau foto soalnya, pilih jalur penyelesaian sesuai perintah soal, lalu bedah langkahnya satu per satu.</p>
+      <h2>{t('solver.title')}</h2>
+      <p className="muted">{t('solver.intro')}</p>
 
-      <div className="pills" role="group" aria-label="Metode penyelesaian">
+      <div className="pills" role="group" aria-label={t('solver.methodsAria')}>
         {METHODS.map((m) => (
-          <button key={m.id} className={'pill' + (m.id === method ? ' on' : '')} onClick={() => setMethod(m.id)}>
-            {m.label}
+          <button key={m} className={'pill' + (m === method ? ' on' : '')} onClick={() => setMethod(m)}>
+            {t(`method.${m}.label`)}
           </button>
         ))}
       </div>
-      <p className="tip">{current.desc}</p>
+      <p className="tip">{t(`method.${method}.desc`)}</p>
 
       <div className="solver-form">
         <label className="inputline">
-          <span>f(x) =</span>
-          <input value={expr} onChange={(e) => setExpr(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run()} aria-label="Fungsi f(x)" />
+          <span>{t('solver.fx')}</span>
+          <input value={expr} onChange={(e) => setExpr(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run()} aria-label={t('solver.fxAria')} />
         </label>
         <select value={order} onChange={(e) => setOrder(+e.target.value)}>
           {[1, 2, 3, 4, 5].map((n) => (
-            <option key={n} value={n}>turunan ke-{n}</option>
+            <option key={n} value={n}>{t('solver.order', { n })}</option>
           ))}
         </select>
-        <button onClick={() => run()} disabled={busy}>{busy ? 'Menghitung...' : 'Hitung'}</button>
+        <button onClick={() => run()} disabled={busy}>{busy ? t('solver.computing') : t('solver.compute')}</button>
       </div>
 
       <div className="row photo">
-        <button className="ghost" onClick={() => cam.current?.click()} disabled={reading}>Foto dengan kamera</button>
-        <button className="ghost" onClick={() => pick.current?.click()} disabled={reading}>Pilih dari galeri</button>
+        <button className="ghost" onClick={() => cam.current?.click()} disabled={reading}>{t('solver.camera')}</button>
+        <button className="ghost" onClick={() => pick.current?.click()} disabled={reading}>{t('solver.gallery')}</button>
         <input ref={cam} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
         <input ref={pick} type="file" accept="image/*" hidden onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
       </div>
 
       {reading && progress && (
         <div className="scan-progress" role="status" aria-live="polite">
-          <span>{progress.label}</span>
+          <span>{t(`progress.${progress.key}`)}</span>
           <span className="bar"><span style={{ width: `${Math.round(progress.value * 100)}%` }} /></span>
         </div>
       )}
 
       {scan && (
         <div className="scanbox">
-          <h3>Ini yang terbaca dari fotomu</h3>
+          <h3>{t('scan.title')}</h3>
           <div className="scan-grid">
-            <img src={scan.seen} alt="Foto setelah dibuat hitam-putih, seperti yang dilihat pembaca" />
+            <img src={scan.seen} alt={t('scan.seenAlt')} />
             <div>
-              <p className="muted">Teks mentah dari pembaca:</p>
-              <p className="rawtext">{scan.raw || '(kosong)'}</p>
-              <p className="muted">Sudah dimasukkan ke kolom f(x) di atas:</p>
+              <p className="muted">{t('scan.raw')}</p>
+              <p className="rawtext">{scan.raw || t('scan.empty')}</p>
+              <p className="muted">{t('scan.into')}</p>
               <p className="rawtext good">{scan.expr}</p>
             </div>
           </div>
           {scan.fixes.length > 0 && (
             <>
-              <p className="muted">Perapian otomatis yang saya lakukan:</p>
+              <p className="muted">{t('scan.fixes')}</p>
               <ul className="fixes">
-                {scan.fixes.map((f) => <li key={f}>{f}</li>)}
+                {scan.fixes.map((f) => <li key={f}>{t(`fix.${f}`)}</li>)}
               </ul>
             </>
           )}
           {scan.alternatives.length > 0 && (
             <div className="alts">
-              <span className="muted">Kalau hasil di atas keliru, coba salah satu tebakan lain ini:</span>
+              <span className="muted">{t('scan.alts')}</span>
               {scan.alternatives.map((a) => (
                 <button key={a} className="ex" onClick={() => setExpr(a)}>{a}</button>
               ))}
             </div>
           )}
           <p className="tip">
-            {lowConf ? 'Pembacanya kurang yakin dengan foto ini. ' : ''}
-            Pembaca teks ini tidak mengerti matematika, jadi pangkat kecil (x²) sering terbaca sebagai angka biasa dan tanda minus kadang keliru. Periksa kolom f(x), perbaiki kalau perlu, baru klik Hitung.
+            {lowConf ? t('scan.lowconf') : ''}
+            {t('scan.warn')}
           </p>
         </div>
       )}
 
       {!scan && !reading && (
-        <p className="muted">Tips foto: dekatkan kamera ke satu soal saja, pakai cahaya terang, dan hindari bayangan. Tulisan cetak jauh lebih mudah dibaca daripada tulisan tangan.</p>
+        <p className="muted">{t('scan.tips')}</p>
       )}
 
       <div className="examples">
-        <span className="muted">Coba:</span>
+        <span className="muted">{t('solver.try')}</span>
         {EXAMPLES.map((x) => (
           <button key={x} className="ex" onClick={() => { setExpr(x); setScan(null); run(x) }}>{x}</button>
         ))}

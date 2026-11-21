@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useI18n } from './i18n'
+import LangToggle from './LangToggle'
+import { lessonsFor, type Go, type Page } from './lessons'
 import Logo from './Logo'
-import { LESSONS, type Go, type Page } from './lessons'
 import Materi from './Materi'
 import Practice from './Practice'
 import Secant from './Secant'
@@ -10,28 +12,18 @@ import Tex from './Tex'
 import ThemeToggle from './ThemeToggle'
 import './index.css'
 
-const NAV: { page: Page; label: string }[] = [
-  { page: 'materi', label: 'Materi' },
-  { page: 'practice', label: 'Latihan' },
-  { page: 'solver', label: 'Penyelesai' },
-  { page: 'about', label: 'Tentang' },
-]
-const TITLES: Record<Page, string> = {
-  home: 'learnkulus | Belajar turunan secara interaktif',
-  materi: 'Materi | learnkulus',
-  practice: 'Latihan | learnkulus',
-  solver: 'Penyelesai | learnkulus',
-  about: 'Tentang | learnkulus',
-}
+const NAV: Page[] = ['materi', 'practice', 'solver', 'about']
 
 export default function App() {
+  const { lang, t } = useI18n()
+  const LESSONS = lessonsFor(lang)
   const [page, setPage] = useState<Page>('home')
   const [lesson, setLesson] = useState(0)
   const [topic, setTopic] = useState('power')
 
   useEffect(() => {
-    document.title = TITLES[page]
-  }, [page])
+    document.title = t(`title.${page}`)
+  }, [page, t])
 
   const go: Go = (p, opt) => {
     if (opt?.lesson !== undefined) setLesson(opt.lesson)
@@ -43,40 +35,40 @@ export default function App() {
   return (
     <>
       <div className="topbar">
-        <button className="brandbtn" onClick={() => go('home')} aria-label="learnkulus, ke beranda">
+        <button className="brandbtn" onClick={() => go('home')} aria-label={t('brand.aria')}>
           <Logo />
           <span className="wordmark">learn<b>kulus</b></span>
         </button>
-        <nav className="topnav" aria-label="Menu utama">
-          {NAV.map((n) => (
-            <button key={n.page} className={page === n.page ? 'on' : ''} onClick={() => go(n.page)}>
-              {n.label}
+        <nav className="topnav" aria-label={t('nav.aria')}>
+          {NAV.map((p) => (
+            <button key={p} className={page === p ? 'on' : ''} onClick={() => go(p)}>
+              {t(`nav.${p}`)}
             </button>
           ))}
         </nav>
-        <ThemeToggle />
+        <div className="topctl">
+          <LangToggle />
+          <ThemeToggle />
+        </div>
       </div>
 
       {page === 'home' && (
         <>
           <header className="hero">
             <div className="hero-text">
-              <p className="kicker">Kalkulus dasar, versi interaktif</p>
+              <p className="kicker">{t('home.kicker')}</p>
               <h1>
-                Pahami <mark>turunan</mark>, lalu latih sampai hafal polanya
+                {t('home.h1a')}<mark>{t('home.h1m')}</mark>{t('home.h1b')}
               </h1>
-              <p className="lead">
-                Belajar dari pengertian sampai aturan rantai dan trigonometri. Soal latihan dibuat acak, jawabanmu
-                diperiksa otomatis, dan pembahasan menjelaskan dari mana setiap angka berasal.
-              </p>
+              <p className="lead">{t('home.lead')}</p>
               <div className="row">
-                <button onClick={() => go('materi', { lesson: 0 })}>Mulai belajar</button>
-                <button className="ghost" onClick={() => go('practice')}>Langsung latihan</button>
+                <button onClick={() => go('materi', { lesson: 0 })}>{t('home.start')}</button>
+                <button className="ghost" onClick={() => go('practice')}>{t('home.practiceNow')}</button>
               </div>
               <div className="stats">
-                <div><b>{LESSONS.length}</b><span>materi</span></div>
-                <div><b>∞</b><span>soal acak</span></div>
-                <div><b>3</b><span>cara penyelesaian</span></div>
+                <div><b>{LESSONS.length}</b><span>{t('home.stat.lessons')}</span></div>
+                <div><b>∞</b><span>{t('home.stat.problems')}</span></div>
+                <div><b>3</b><span>{t('home.stat.methods')}</span></div>
               </div>
             </div>
             <div className="demo-wrap">
@@ -88,8 +80,8 @@ export default function App() {
           </header>
 
           <section className="map">
-            <h2>Peta materi</h2>
-            <p className="muted">Ikuti urutannya, atau lompat ke topik yang kamu butuhkan.</p>
+            <h2>{t('home.map')}</h2>
+            <p className="muted">{t('home.mapHint')}</p>
             <ol className="lessons">
               {LESSONS.map((l, i) => (
                 <li key={l.id}>
@@ -104,13 +96,13 @@ export default function App() {
           </section>
 
           <section className="home-about">
-            <h2>Kenapa learnkulus?</h2>
+            <h2>{t('home.why')}</h2>
             <ul>
-              <li><b>Setiap angka ada asalnya.</b> Pembahasan memperlihatkan u, v, dan turunannya, bukan hanya hasil akhir.</li>
-              <li><b>Soal tidak habis.</b> Soal dibuat acak per topik, dan jawaban diperiksa berdasarkan nilainya, jadi bentuk yang berbeda tetap dianggap benar.</li>
-              <li><b>Tanpa akun.</b> Kemajuan tersimpan di browser, dan foto soal dibaca di perangkatmu sendiri.</li>
+              <li><b>{t('home.why1b')}</b>{t('home.why1')}</li>
+              <li><b>{t('home.why2b')}</b>{t('home.why2')}</li>
+              <li><b>{t('home.why3b')}</b>{t('home.why3')}</li>
             </ul>
-            <button className="ghost" onClick={() => go('about')}>Baca selengkapnya</button>
+            <button className="ghost" onClick={() => go('about')}>{t('home.more')}</button>
           </section>
         </>
       )}
@@ -137,10 +129,10 @@ export default function App() {
       )}
 
       <footer>
-        <p>© {new Date().getFullYear()} Ricardo Gellael. Seluruh hak cipta dilindungi.</p>
-        <p className="muted">learnkulus dibuat oleh Ricardo Gellael untuk belajar kalkulus dengan cara yang lebih menyenangkan.</p>
+        <p>{t('footer.copy', { year: new Date().getFullYear() })}</p>
+        <p className="muted">{t('footer.made')}</p>
         <p>
-          <button type="button" className="linkbtn" onClick={() => go('about')}>Tentang learnkulus</button>
+          <button type="button" className="linkbtn" onClick={() => go('about')}>{t('footer.about')}</button>
         </p>
       </footer>
     </>

@@ -1,9 +1,11 @@
+import { useI18n } from './i18n'
 import { useTheme } from './theme'
 
 export default function ThemeToggle() {
   const { theme, toggle } = useTheme()
+  const { t } = useI18n()
   const dark = theme === 'dark'
-  const label = dark ? 'Ganti ke tema terang' : 'Ganti ke tema gelap'
+  const label = dark ? t('theme.toLight') : t('theme.toDark')
 
   return (
     <button type="button" className="themebtn" onClick={toggle} aria-label={label} title={label}>

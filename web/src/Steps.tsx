@@ -1,29 +1,32 @@
 import type { Solution } from './api'
-import { buildTree, isMarker, parseRow, parseWhy, tone, type Node } from './stepModel'
+import { useI18n } from './i18n'
+import { buildTree, isMarker, isSimplify, parseRow, parseWhy, tone, type Node } from './stepModel'
 import Tex from './Tex'
 
 const jump = (n: string) => document.getElementById(`langkah-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
 function Note({ text }: { text: string }) {
-  const m = text.match(/^hasil langkah (\d+)$/)
+  const { t } = useI18n()
+  const m = text.match(/^(?:hasil langkah|result of step) (\d+)$/)
   if (!m) return <span className="sx-note">{text}</span>
   return (
     <span className="sx-note">
-      dari{' '}
+      {t('steps.from')}{' '}
       <button type="button" className="sx-ref" onClick={() => jump(m[1])}>
-        langkah {m[1]}
+        {t('steps.stepN', { n: m[1] })}
       </button>
     </span>
   )
 }
 
 function Rows({ lines, title, timeline }: { lines: string[]; title?: string; timeline?: boolean }) {
+  const { t } = useI18n()
   const rows = lines.map(parseRow)
   return (
     <div className={'sx-rows' + (timeline ? ' tl' : '')}>
       {title && <p className="sx-sec">{title}</p>}
       {rows.map((r, j) =>
-        r.kind === 'label' && r.label?.startsWith('Berikutnya') ? (
+        r.kind === 'label' && /^(Berikutnya|Next)\b/.test(r.label ?? '') ? (
           <p key={j} className="sx-next">
             <span>{r.label}</span>
             <Tex tex={r.tex} />
@@ -31,7 +34,7 @@ function Rows({ lines, title, timeline }: { lines: string[]; title?: string; tim
         ) : (
           <div key={j} className={`sx-row ${r.kind}`}>
             {r.kind === 'label' && <span className="sx-rl">{r.label}</span>}
-            {r.kind === 'result' && <span className="sx-rl">Jadi</span>}
+            {r.kind === 'result' && <span className="sx-rl">{t('steps.so')}</span>}
             <div className="sx-math">
               <Tex tex={r.tex} />
             </div>
@@ -44,13 +47,14 @@ function Rows({ lines, title, timeline }: { lines: string[]; title?: string; tim
 }
 
 function Why({ text, open }: { text: string; open: boolean }) {
+  const { t } = useI18n()
   return (
     <details className="sx-why" open={open}>
-      <summary>Penjelasan</summary>
+      <summary>{t('steps.why')}</summary>
       <div className="sx-why-body">
         {parseWhy(text).map((it, k) => (
           <p key={k} className={`sx-why-item ${it.kind}`}>
-            {it.label && <b>{it.label}</b>}
+            {it.key && <b>{t(`why.${it.key}`)}</b>}
             {it.text}
           </p>
         ))}
@@ -60,11 +64,12 @@ function Why({ text, open }: { text: string; open: boolean }) {
 }
 
 function Block({ n, nested = false }: { n: Node; nested?: boolean }) {
+  const { t } = useI18n()
   const { s, i } = n
-  const simplify = s.rule === 'Sederhanakan'
+  const simplify = isSimplify(s)
   const result = n.merge ? n.merge.s.result : s.result
   return (
-    <section id={`langkah-${i + 1}`} className={`sx-block ${tone(s.rule)}${nested ? ' nested' : ''}`}>
+    <section id={`langkah-${i + 1}`} className={`sx-block ${tone(s.kind)}${nested ? ' nested' : ''}`}>
       <header className="sx-title">
         <span className="sx-num">{i + 1}</span>
         <h4>{s.rule}</h4>
@@ -72,23 +77,23 @@ function Block({ n, nested = false }: { n: Node; nested?: boolean }) {
 
       {s.appliedTo && (
         <p className="sx-on">
-          <span className="sx-k">Bagian ini</span>
+          <span className="sx-k">{t('steps.on')}</span>
           <Tex tex={s.appliedTo} />
         </p>
       )}
       {s.formula && (
         <div className="sx-formula">
-          <span className="sx-k">Rumus</span>
+          <span className="sx-k">{t('steps.formula')}</span>
           <Tex tex={s.formula} />
         </div>
       )}
       {s.why && <Why text={s.why} open={!nested} />}
 
-      {s.details.length > 0 && <Rows lines={s.details} title={simplify ? 'Tahap perapian' : n.merge ? 'Dimisalkan' : 'Perhitungan'} timeline={simplify} />}
+      {s.details.length > 0 && <Rows lines={s.details} title={simplify ? t('steps.tidy') : n.merge ? t('steps.assumed') : t('steps.calc')} timeline={simplify} />}
 
       {n.kids.length > 0 && (
         <div className="sx-kids">
-          <p className="sx-sec">Dikerjakan dulu</p>
+          <p className="sx-sec">{t('steps.kids')}</p>
           {n.kids.map((k) => (
             <Block key={k.i} n={k} nested />
           ))}
@@ -97,7 +102,7 @@ function Block({ n, nested = false }: { n: Node; nested?: boolean }) {
 
       {n.merge && (
         <div className="sx-merge">
-          <p className="sx-sec">Langkah {n.merge.i + 1}: masukkan ke rumus</p>
+          <p className="sx-sec">{t('steps.merge', { n: n.merge.i + 1 })}</p>
           <p className="sx-hint">{n.merge.s.why}</p>
           <Rows lines={n.merge.s.details} />
         </div>
@@ -105,7 +110,7 @@ function Block({ n, nested = false }: { n: Node; nested?: boolean }) {
 
       {result && (
         <p className="sx-result">
-          <span>Hasil bagian ini</span>
+          <span>{t('steps.result')}</span>
           <Tex tex={result} />
         </p>
       )}
@@ -114,19 +119,20 @@ function Block({ n, nested = false }: { n: Node; nested?: boolean }) {
 }
 
 export default function Steps({ sol }: { sol: Solution }) {
+  const { t } = useI18n()
   const tree = buildTree(sol.steps)
-  const route = tree.filter((n) => !isMarker(n.s.rule))
+  const route = tree.filter((n) => !isMarker(n.s))
 
   return (
     <div className="sx">
       <div className="sx-head">
-        <h3>Pembahasan</h3>
-        <span>{sol.steps.length} langkah</span>
+        <h3>{t('steps.title')}</h3>
+        <span>{t('steps.count', { n: sol.steps.length })}</span>
       </div>
 
       {route.length > 1 && route.length <= 6 && (
         <p className="sx-route">
-          <b>Jalur:</b>
+          <b>{t('steps.route')}</b>
           {route.map((n, k) => (
             <span key={n.i}>
               {k > 0 && <i> → </i>}
@@ -137,16 +143,16 @@ export default function Steps({ sol }: { sol: Solution }) {
       )}
 
       <details className="sx-why sx-read">
-        <summary>Cara membaca pembahasan</summary>
+        <summary>{t('steps.how')}</summary>
         <div className="sx-why-body">
-          <p className="sx-why-item intro">Setiap kotak besar adalah satu aturan: rumusnya, lalu u dan v yang dimisalkan.</p>
-          <p className="sx-why-item intro">Kotak kecil di dalamnya adalah pekerjaan sampingan untuk mencari turunan u dan v. Selesaikan dulu sebelum kembali ke kotak induk.</p>
-          <p className="sx-why-item intro">Teks "dari langkah N" bisa diketuk untuk melompat ke langkah itu.</p>
+          <p className="sx-why-item intro">{t('steps.how1')}</p>
+          <p className="sx-why-item intro">{t('steps.how2')}</p>
+          <p className="sx-why-item intro">{t('steps.how3')}</p>
         </div>
       </details>
 
       {tree.map((n) =>
-        isMarker(n.s.rule) ? (
+        isMarker(n.s) ? (
           <h4 key={n.i} className="sx-marker">
             <span>{n.s.rule}</span>
             {n.s.appliedTo && <Tex tex={n.s.appliedTo} />}
@@ -157,7 +163,7 @@ export default function Steps({ sol }: { sol: Solution }) {
       )}
 
       <div className="sx-answer">
-        <span className="sx-k">Jawaban</span>
+        <span className="sx-k">{t('steps.answer')}</span>
         <Tex tex={sol.derivative} />
       </div>
     </div>

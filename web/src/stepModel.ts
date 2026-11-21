@@ -1,20 +1,31 @@
 import type { Step } from './api'
 
-export const isMerge = (rule: string) => rule.startsWith('Gabungkan:')
-export const isMarker = (rule: string) => rule.startsWith('Turunan ke')
+// Jenis langkah dibaca dari `kind` (dikirim engine, sama di semua bahasa), bukan dari teks yang ditampilkan.
+export const isMerge = (s: Step) => s.kind.startsWith('merge:')
+export const isMarker = (s: Step) => s.kind === 'marker'
+export const isSimplify = (s: Step) => s.kind === 'simplify'
 
-const TONES: [RegExp, string][] = [
-  [/perkalian/i, 'violet'],
-  [/hasil bagi/i, 'coral'],
-  [/rantai/i, 'sky'],
-  [/pangkat/i, 'mint'],
-  [/jumlah|selisih|gabung/i, 'pink'],
-  [/dasar|kelipatan/i, 'sun'],
-  [/definisi|limit|f\(x/i, 'violet'],
-  [/jabarkan/i, 'coral'],
-  [/sederhanakan|bagi dengan h|tiap suku/i, 'mint'],
-]
-export const tone = (rule: string) => TONES.find(([re]) => re.test(rule))?.[1] ?? 'ink'
+const TONES: Record<string, string> = {
+  product: 'violet',
+  quotient: 'coral',
+  chain: 'sky',
+  'chain-power': 'sky',
+  power: 'mint',
+  sum: 'pink',
+  diff: 'pink',
+  combine: 'pink',
+  'const-mult': 'sun',
+  basic: 'sun',
+  def: 'violet',
+  fxh: 'violet',
+  fdiff: 'violet',
+  limit: 'violet',
+  expand: 'coral',
+  divh: 'mint',
+  'each-term': 'mint',
+  simplify: 'mint',
+}
+export const tone = (kind: string) => TONES[kind.replace(/^merge:/, '')] ?? 'ink'
 
 /**
  * Engine mengirim langkah sebagai daftar datar. Di sini diubah menjadi pohon:
@@ -27,7 +38,7 @@ export function buildTree(steps: Step[]): Node[] {
   const roots: Node[] = []
   const stack: Node[] = []
   steps.forEach((s, i) => {
-    if (isMerge(s.rule)) {
+    if (isMerge(s)) {
       const p = stack[s.depth]
       if (p && !p.merge) {
         p.merge = { i, s }
@@ -62,17 +73,28 @@ export function parseRow(d: string): Row {
   return { kind: 'plain', tex, note }
 }
 
-const WHY_LABELS: Record<string, string> = {
-  Kapan: 'Kapan dipakai',
-  Cara: 'Caranya',
-  Caranya: 'Caranya',
-  Awas: 'Awas',
-  Contoh: 'Contoh',
-  'Contoh cepat': 'Contoh',
-  'Trik hafal': 'Trik hafal',
-  Ingat: 'Ingat',
+export type WhyKey = 'when' | 'how' | 'warn' | 'example' | 'trick' | 'remember'
+
+// Label penjelasan dari engine, dalam Indonesia maupun Inggris, dipetakan ke kunci yang sama.
+const WHY_KEYS: Record<string, WhyKey> = {
+  Kapan: 'when',
+  When: 'when',
+  Cara: 'how',
+  Caranya: 'how',
+  How: 'how',
+  Awas: 'warn',
+  'Watch out': 'warn',
+  Contoh: 'example',
+  'Contoh cepat': 'example',
+  Example: 'example',
+  'Trik hafal': 'trick',
+  'Memory trick': 'trick',
+  Ingat: 'remember',
+  Remember: 'remember',
 }
-export type WhyItem = { label?: string; kind: string; text: string }
+const WHY_RE = /^(Kapan|Caranya|Cara|Awas|Contoh cepat|Contoh|Trik hafal|Ingat|When|How|Watch out|Example|Memory trick|Remember):\s*(.*)$/
+
+export type WhyItem = { key?: WhyKey; kind: 'intro' | 'item' | 'awas'; text: string }
 
 /** Penjelasan dari engine ("Kapan: ...\nCara: ...\nAwas: ...") -> butir berlabel. */
 export function parseWhy(text: string): WhyItem[] {
@@ -80,9 +102,10 @@ export function parseWhy(text: string): WhyItem[] {
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean)
-    .map((line) => {
-      const m = line.match(/^(Kapan|Caranya|Cara|Awas|Contoh cepat|Contoh|Trik hafal|Ingat):\s*(.*)$/)
+    .map((line): WhyItem => {
+      const m = line.match(WHY_RE)
       if (!m) return { kind: 'intro', text: line }
-      return { label: WHY_LABELS[m[1]], kind: m[1] === 'Awas' ? 'awas' : 'item', text: m[2] }
+      const key = WHY_KEYS[m[1]]
+      return { key, kind: key === 'warn' ? 'awas' : 'item', text: m[2] }
     })
 }

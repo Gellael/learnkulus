@@ -1,5 +1,5 @@
 import { createWorker, PSM } from 'tesseract.js'
-import { cleanMath } from './ocrClean'
+import { cleanMath, type FixId } from './ocrClean'
 
 /**
  * Scan soal dari foto TANPA AI dan TANPA server: seluruh proses jalan di browser
@@ -14,8 +14,8 @@ export type ScanResult = {
   raw: string
   /** Ekspresi yang sudah dirapikan, siap dimasukkan ke kolom f(x). */
   expr: string
-  /** Daftar perbaikan otomatis yang dilakukan. */
-  fixes: string[]
+  /** Daftar perbaikan otomatis yang dilakukan (diterjemahkan di antarmuka). */
+  fixes: FixId[]
   /** Tebakan lain kalau `expr` keliru (misalnya x miring terbaca 2). */
   alternatives: string[]
   /** Keyakinan OCR 0..100 (rata-rata dari Tesseract). */
@@ -24,14 +24,24 @@ export type ScanResult = {
   seen: string
 }
 
-export type Progress = { label: string; value: number }
+export type ProgressKey = 'preparing' | 'loadCore' | 'init' | 'download' | 'reading'
+export type Progress = { key: ProgressKey; value: number }
 
-const LABELS: Record<string, string> = {
-  'loading tesseract core': 'Memuat mesin pembaca...',
-  'initializing tesseract': 'Menyiapkan mesin pembaca...',
-  'loading language traineddata': 'Mengunduh data huruf (hanya pertama kali)...',
-  'initializing api': 'Menyiapkan mesin pembaca...',
-  'recognizing text': 'Membaca soal...',
+/** Galat yang pesannya diterjemahkan di antarmuka lewat kunci `key` (mis. 'err.noText'). */
+export class ScanError extends Error {
+  key: string
+  constructor(key: string) {
+    super(key)
+    this.key = key
+  }
+}
+
+const KEYS: Record<string, ProgressKey> = {
+  'loading tesseract core': 'loadCore',
+  'initializing tesseract': 'init',
+  'loading language traineddata': 'download',
+  'initializing api': 'init',
+  'recognizing text': 'reading',
 }
 
 /** Ambang Otsu: memisahkan latar dan tulisan secara otomatis. */
@@ -103,22 +113,22 @@ export async function prepare(file: File): Promise<HTMLCanvasElement> {
   return c
 }
 
-/** Baca soal dari foto. Lempar Error berbahasa Indonesia jika gagal. */
+/** Baca soal dari foto. Melempar ScanError (kunci terjemahan) jika gagal. */
 export async function scanProblem(file: File, onProgress?: (p: Progress) => void): Promise<ScanResult> {
-  if (!file.type.startsWith('image/')) throw new Error('File harus berupa gambar (JPG, PNG, atau WEBP).')
+  if (!file.type.startsWith('image/')) throw new ScanError('err.notImage')
 
   let canvas: HTMLCanvasElement
   try {
     canvas = await prepare(file)
   } catch {
-    throw new Error('Gambar tidak bisa dibuka. Coba foto ulang atau pilih gambar lain.')
+    throw new ScanError('err.badImage')
   }
 
-  onProgress?.({ label: 'Menyiapkan foto...', value: 0.02 })
+  onProgress?.({ key: 'preparing', value: 0.02 })
   const worker = await createWorker('eng', 1, {
     logger: (m: { status: string; progress: number }) => {
-      const label = LABELS[m.status]
-      if (label) onProgress?.({ label, value: m.progress })
+      const key = KEYS[m.status]
+      if (key) onProgress?.({ key, value: m.progress })
     },
   })
   try {
@@ -132,7 +142,7 @@ export async function scanProblem(file: File, onProgress?: (p: Progress) => void
     const raw = (data.text ?? '').trim()
     const { expr, fixes, alternatives } = cleanMath(raw)
     if (!expr) {
-      throw new Error('Tidak ada tulisan soal yang terbaca. Coba foto lebih dekat, lebih terang, dan hanya berisi satu soal.')
+      throw new ScanError('err.noText')
     }
     return { raw, expr, fixes, alternatives, confidence: Math.round(data.confidence ?? 0), seen: canvas.toDataURL('image/jpeg', 0.7) }
   } finally {

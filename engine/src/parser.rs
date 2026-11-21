@@ -2,6 +2,7 @@
 //! sin cos tan sec csc cot sqrt, serta perkalian implisit ("3x", "x sin x", "sin 3x").
 
 use crate::expr::*;
+use crate::lang::Lang;
 
 #[derive(Debug, Clone, PartialEq)]
 enum Tok {
@@ -19,7 +20,7 @@ enum Tok {
 
 type R = Result<Expr, String>;
 
-fn lex(s: &str) -> Result<Vec<Tok>, String> {
+fn lex(s: &str, l: Lang) -> Result<Vec<Tok>, String> {
     let c: Vec<char> = s.chars().collect();
     let mut i = 0;
     let mut t = Vec::new();
@@ -35,7 +36,7 @@ fn lex(s: &str) -> Result<Vec<Tok>, String> {
                 i += 1;
             }
             let txt: String = c[st..i].iter().collect();
-            let n = txt.parse().map_err(|_| format!("Angka tidak valid: {}", txt))?;
+            let n = txt.parse().map_err(|_| l.p(format!("Angka tidak valid: {}", txt), format!("Invalid number: {}", txt)))?;
             t.push(Tok::Num(n));
             continue;
         }
@@ -54,7 +55,7 @@ fn lex(s: &str) -> Result<Vec<Tok>, String> {
                     t.push(Tok::X);
                     rest = &rest[1..];
                 } else {
-                    return Err(format!("Simbol tidak dikenal: {}", rest));
+                    return Err(l.p(format!("Simbol tidak dikenal: {}", rest), format!("Unknown symbol: {}", rest)));
                 }
             }
             continue;
@@ -67,7 +68,7 @@ fn lex(s: &str) -> Result<Vec<Tok>, String> {
             '^' => Tok::Caret,
             '(' => Tok::LP,
             ')' => Tok::RP,
-            _ => return Err(format!("Karakter tidak dikenal: {}", ch)),
+            _ => return Err(l.p(format!("Karakter tidak dikenal: {}", ch), format!("Unknown character: {}", ch))),
         });
         i += 1;
     }
@@ -78,6 +79,7 @@ struct P {
     t: Vec<Tok>,
     p: usize,
     depth: usize,
+    l: Lang,
 }
 
 impl P {
@@ -88,7 +90,7 @@ impl P {
     fn expr(&mut self) -> R {
         self.depth += 1;
         if self.depth > 64 {
-            return Err("Ekspresi terlalu dalam".into());
+            return Err(self.l.p("Ekspresi terlalu dalam", "Expression is too deeply nested"));
         }
         let mut l = self.term()?;
         loop {
@@ -149,7 +151,8 @@ impl P {
     }
 
     fn atom(&mut self) -> R {
-        let tok = self.peek().cloned().ok_or("Ekspresi berakhir terlalu cepat")?;
+        let l = self.l;
+        let tok = self.peek().cloned().ok_or_else(|| l.p("Ekspresi berakhir terlalu cepat", "The expression ended too early"))?;
         self.p += 1;
         match tok {
             Tok::Num(n) => Ok(num(n)),
@@ -163,7 +166,7 @@ impl P {
                 let arg = self.func_arg()?;
                 Ok(call(f, arg))
             }
-            other => Err(format!("Token tidak terduga: {:?}", other)),
+            other => Err(self.l.p(format!("Token tidak terduga: {:?}", other), format!("Unexpected token: {:?}", other))),
         }
     }
 
@@ -173,7 +176,7 @@ impl P {
                 self.p += 1;
                 Ok(())
             }
-            _ => Err("Kurung tutup ')' tidak ditemukan".into()),
+            _ => Err(self.l.p("Kurung tutup ')' tidak ditemukan", "Closing parenthesis ')' not found")),
         }
     }
 
@@ -195,17 +198,21 @@ impl P {
 }
 
 pub fn parse(input: &str) -> R {
+    parse_lang(input, Lang::Id)
+}
+
+pub fn parse_lang(input: &str, l: Lang) -> R {
     if input.chars().count() > 300 {
-        return Err("Ekspresi terlalu panjang".into());
+        return Err(l.p("Ekspresi terlalu panjang", "Expression is too long"));
     }
-    let t = lex(input)?;
+    let t = lex(input, l)?;
     if t.is_empty() {
-        return Err("Ekspresi kosong".into());
+        return Err(l.p("Ekspresi kosong", "Expression is empty"));
     }
-    let mut p = P { t, p: 0, depth: 0 };
+    let mut p = P { t, p: 0, depth: 0, l };
     let e = p.expr()?;
     if p.p < p.t.len() {
-        return Err("Ada bagian ekspresi yang tidak dikenali".into());
+        return Err(l.p("Ada bagian ekspresi yang tidak dikenali", "Part of the expression was not recognized"));
     }
     Ok(e)
 }
