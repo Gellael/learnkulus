@@ -403,3 +403,12 @@ aside { max-height: calc(100vh - 92px); max-height: calc(100dvh - 92px); overflo
   .topnav button { padding: 8px 10px; }
 }
 .slider input { margin: 0; }
+
+/* ---------- navigasi atas: kata tidak boleh terpotong ---------- */
+/* body memakai overflow-wrap: anywhere, yang boleh memotong kata di tengah kalau tombolnya sempit. */
+.topnav button { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+@media (max-width: 560px) {
+  .topnav { gap: 2px; }
+  /* lebar mengikuti isi (bukan dipaksa sama), dan huruf mengecil mengikuti lebar layar */
+  .topnav button { flex: 1 1 auto; padding: 8px clamp(3px, 1.5vw, 8px); font-size: clamp(.78rem, 3.7vw, 1rem); }
+}

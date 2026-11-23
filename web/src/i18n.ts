@@ -9,14 +9,14 @@ const ID = {
   // navigasi dan judul tab
   'nav.materi': 'Materi',
   'nav.practice': 'Latihan',
-  'nav.solver': 'Penyelesai',
+  'nav.solver': 'Hitung',
   'nav.about': 'Tentang',
   'nav.aria': 'Menu utama',
   'brand.aria': 'learnkulus, ke beranda',
   'title.home': 'learnkulus | Belajar turunan secara interaktif',
   'title.materi': 'Materi | learnkulus',
   'title.practice': 'Latihan | learnkulus',
-  'title.solver': 'Penyelesai | learnkulus',
+  'title.solver': 'Hitung | learnkulus',
   'title.about': 'Tentang | learnkulus',
   'lang.switch': 'Ganti bahasa',
   'lang.title': 'Bahasa: Indonesia',
@@ -53,7 +53,7 @@ const ID = {
   'materi.examples': 'Contoh',
   'materi.problem': 'Soal:',
   'materi.practiceTopic': 'Latihan topik ini',
-  'materi.tryInSolver': 'Coba di Penyelesai',
+  'materi.tryInSolver': 'Coba hitung sendiri',
   'materi.next': 'Materi berikutnya',
 
   // latihan
@@ -73,7 +73,7 @@ const ID = {
   'topic.trig': 'Trigonometri',
 
   // penyelesai
-  'solver.title': 'Penyelesai turunan',
+  'solver.title': 'Hitung turunan',
   'solver.intro': 'Ketik fungsi atau foto soalnya, pilih jalur penyelesaian sesuai perintah soal, lalu bedah langkahnya satu per satu.',
   'solver.methodsAria': 'Metode penyelesaian',
   'method.auto.label': 'Aturan turunan',
