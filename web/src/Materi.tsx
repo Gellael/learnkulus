@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import Tex from './Tex'
 import { useI18n } from './i18n'
 import { lessonsFor, type Go } from './lessons'
@@ -6,9 +7,13 @@ export default function Materi({ index, setIndex, go }: { index: number; setInde
   const { lang, t } = useI18n()
   const LESSONS = lessonsFor(lang)
   const l = LESSONS[index]
+  const asideRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    asideRef.current?.querySelector<HTMLElement>('.side.on')?.scrollIntoView({ inline: 'center', block: 'nearest' })
+  }, [index])
   return (
     <div className="materi">
-      <aside>
+      <aside ref={asideRef}>
         <ol>
           {LESSONS.map((x, i) => (
             <li key={x.id}>

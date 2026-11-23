@@ -363,3 +363,43 @@ button { transition: transform .1s, box-shadow .1s, background-color .2s, border
   .langsw-thumb, .langsw-opt { transition: none; }
   body, .topbar, footer, .card, .tip, .rule, .scanbox, .demo, .stats div, .about-card, .sx-block, .sx-read, .stepcard, input, select, button { transition: none; }
 }
+
+/* ---------- materi: responsif untuk semua ukuran layar ---------- */
+/* minmax(0, 1fr): tanpa ini "1fr" berarti minmax(auto, 1fr), sehingga daftar materi yang satu baris
+   (selebar isinya) mendorong kolom grid dan seluruh halaman menjadi lebih lebar dari layar. */
+.materi { grid-template-columns: 270px minmax(0, 1fr); }
+.materi > * { min-width: 0; }
+aside { max-height: calc(100vh - 92px); max-height: calc(100dvh - 92px); overflow-y: auto; padding: 2px 6px 8px 2px; scrollbar-width: thin; }
+.materi article > h2 { overflow-wrap: anywhere; }
+.materi .steps { margin: 10px 0; }
+.materi .steps li { min-width: 0; }
+.materi .steps .tex, .materi .rule .tex { display: block; max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+.materi .answer { max-width: 100%; overflow-x: auto; }
+.materi .row > button { max-width: 100%; }
+@media (max-width: 1024px) {
+  .materi { grid-template-columns: 230px minmax(0, 1fr); gap: 20px; }
+}
+@media (max-width: 860px) {
+  .materi { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  aside { position: static; max-height: none; overflow: visible; padding: 0; }
+  aside ol { scroll-padding: 0 12px; -webkit-overflow-scrolling: touch; }
+  .side { white-space: nowrap; }
+}
+@media (max-width: 560px) {
+  .materi article > h2 { font-size: 1.35rem; }
+  .materi h3 { margin-top: 20px; }
+  .materi .rule { padding: 6px 10px; border-left-width: 6px; }
+  .materi .row { gap: 8px; }
+  .materi .row > button { flex: 1 1 100%; }
+  .materi .tip { padding: 8px 12px; }
+}
+@media (max-height: 460px) and (orientation: landscape) {
+  .topbar { position: static; }          /* HP landscape: topbar tidak memakan tinggi layar */
+  aside { top: 8px; max-height: calc(100dvh - 16px); }
+}
+@media (min-width: 561px) and (max-width: 760px) {
+  .topbar { gap: 8px; }
+  .topnav { gap: 2px; }
+  .topnav button { padding: 8px 10px; }
+}
+.slider input { margin: 0; }
