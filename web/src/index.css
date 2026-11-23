@@ -46,7 +46,7 @@ li { margin-bottom: 10px; }
 
 /* ---------- tombol ---------- */
 button { font: inherit; font-weight: 700; cursor: pointer; padding: 10px 18px; border-radius: 10px; border: 2px solid var(--line); background: var(--violet); color: #fff; box-shadow: 3px 3px 0 var(--shadow); transition: transform .1s, box-shadow .1s; }
-button:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--shadow); }
+@media (hover: hover) { button:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--shadow); } }
 button:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--shadow); }
 button:disabled { opacity: .5; cursor: default; }
 button.ghost { background: var(--panel); color: var(--ink); }
@@ -58,11 +58,12 @@ input:not([type='range']) { flex: 1 1 200px; min-width: 0; }
 /* ---------- topbar ---------- */
 .topbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 20px; background: var(--panel); border-bottom: 3px solid var(--line); }
 .brandbtn { display: flex; align-items: center; gap: 10px; padding: 0; border: none; background: none; box-shadow: none; color: var(--ink); font-size: 1.2rem; font-weight: 800; }
-.brandbtn:hover:not(:disabled), .brandbtn:active:not(:disabled) { box-shadow: none; transform: none; color: var(--violet); }
+.brandbtn:active:not(:disabled) { box-shadow: none; transform: none; color: var(--violet); }
+@media (hover: hover) { .brandbtn:hover:not(:disabled) { box-shadow: none; transform: none; color: var(--violet); } }
 .topnav { display: flex; gap: 6px; }
 .topnav button { background: transparent; color: var(--ink); border-color: transparent; box-shadow: none; }
-.topnav button:hover:not(:disabled) { background: var(--grid); box-shadow: none; transform: none; }
-.topnav button.on { background: var(--sun); color: var(--on-sun); border-color: var(--line); box-shadow: 3px 3px 0 var(--shadow); }
+@media (hover: hover) { .topnav button:not(.on):hover:not(:disabled) { background: var(--grid); box-shadow: none; transform: none; } }
+.topnav button.on, .topnav button.on:hover:not(:disabled) { background: var(--sun); color: var(--on-sun); border-color: var(--line); box-shadow: 3px 3px 0 var(--shadow); transform: none; }
 
 /* ---------- beranda ---------- */
 .hero { max-width: 1080px; margin: 0 auto; padding: 48px 20px 28px; display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center;
@@ -99,7 +100,7 @@ mark { background: linear-gradient(transparent 55%, var(--mark) 55%); color: inh
 .lessons { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); gap: 16px; }
 .lessons li { margin: 0; }
 .lesson-card { display: grid; gap: 4px; width: 100%; height: 100%; text-align: left; color: var(--ink); padding: 16px; border-radius: 14px; box-shadow: 4px 4px 0 var(--shadow); }
-.lesson-card:hover:not(:disabled) { transform: translate(-2px, -3px) rotate(-.6deg); box-shadow: 7px 8px 0 var(--shadow); }
+@media (hover: hover) { .lesson-card:hover:not(:disabled) { transform: translate(-2px, -3px) rotate(-.6deg); box-shadow: 7px 8px 0 var(--shadow); } }
 .lesson-card strong { font-size: 1.05rem; }
 .big { font-size: 2.4rem; font-weight: 800; line-height: 1; }
 
@@ -307,7 +308,7 @@ input, select { font-size: 16px; } /* 16px mencegah zoom otomatis di iOS */
 .wordmark { letter-spacing: -.01em; }
 .wordmark b { color: var(--violet); font-weight: 800; }
 .linkbtn { all: unset; cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
-.linkbtn:hover { color: var(--violet); }
+@media (hover: hover) { .linkbtn:hover { color: var(--violet); } }
 .linkbtn:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; }
 
 .home-about { max-width: 1080px; margin: 0 auto; padding: 0 20px 48px; }
